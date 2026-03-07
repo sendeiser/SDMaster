@@ -167,23 +167,58 @@ body {
   font-style: normal;
 }
 
-.quill-premium-wrapper .ql-editor p {
-  margin-bottom: 0.75rem;
-}
-
-.quill-premium-wrapper .ql-editor h1, 
-.quill-premium-wrapper .ql-editor h2, 
+.quill-premium-wrapper .ql-editor h1,
+.quill-premium-wrapper .ql-editor h2,
 .quill-premium-wrapper .ql-editor h3 {
   color: #0f172a;
-  font-weight: 800;
-  margin-top: 1.5rem;
-  margin-bottom: 0.5rem;
   letter-spacing: -0.025em;
 }
 
-.quill-premium-wrapper .ql-editor h1 { font-size: 1.5rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.5rem; }
-.quill-premium-wrapper .ql-editor h2 { font-size: 1.25rem; }
-.quill-premium-wrapper .ql-editor h3 { font-size: 1rem; }
+.quill-premium-wrapper .ql-editor h1 {
+  font-size: 1.875rem;
+  font-weight: 900;
+  border-bottom: 2px solid #0ea5e9;
+  padding-bottom: 0.5rem;
+  margin-top: 2rem;
+  margin-bottom: 1.5rem;
+}
+
+.quill-premium-wrapper .ql-editor h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1e293b;
+  border-left: 4px solid #38bdf8;
+  padding-left: 0.75rem;
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.quill-premium-wrapper .ql-editor h3 {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #334155;
+  margin-top: 1.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.quill-premium-wrapper .ql-editor p {
+  color: #475569;
+  font-size: 1rem;
+  line-height: 1.625;
+  margin-bottom: 1rem;
+}
+
+.quill-premium-wrapper .ql-editor ul,
+.quill-premium-wrapper .ql-editor ol {
+  color: #475569;
+  margin-left: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.quill-premium-wrapper .ql-editor li {
+  margin-bottom: 0.5rem;
+  padding-left: 0.25rem;
+}
 
 .quill-premium-wrapper .ql-snow .ql-picker {
   color: #64748b;
@@ -194,23 +229,36 @@ body {
   stroke: #64748b;
 }
 
-.quill-premium-wrapper .ql-snow .ql-fill, 
+.quill-premium-wrapper .ql-snow .ql-fill,
 .quill-premium-wrapper .ql-snow .ql-stroke.ql-fill {
   fill: #64748b;
 }
 
-.quill-premium-wrapper .ql-snow.ql-toolbar button:hover .ql-stroke { stroke: #0ea5e9; }
-.quill-premium-wrapper .ql-snow.ql-toolbar button:hover .ql-fill { fill: #0ea5e9; }
-.quill-premium-wrapper .ql-snow.ql-toolbar button.ql-active .ql-stroke { stroke: #0ea5e9; }
-.quill-premium-wrapper .ql-snow.ql-toolbar button.ql-active .ql-fill { fill: #0ea5e9; }
+.quill-premium-wrapper .ql-snow.ql-toolbar button:hover .ql-stroke {
+  stroke: #0ea5e9;
+}
+
+.quill-premium-wrapper .ql-snow.ql-toolbar button:hover .ql-fill {
+  fill: #0ea5e9;
+}
+
+.quill-premium-wrapper .ql-snow.ql-toolbar button.ql-active .ql-stroke {
+  stroke: #0ea5e9;
+}
+
+.quill-premium-wrapper .ql-snow.ql-toolbar button.ql-active .ql-fill {
+  fill: #0ea5e9;
+}
 
 .quill-premium-wrapper .ql-editor blockquote {
-  border-left: 4px solid #38bdf8;
+  border-left: 4px solid #e2e8f0;
   padding-left: 1rem;
-  margin: 1rem 0;
-  background-color: #f0f9ff;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  margin: 1.5rem 0;
+  background-color: rgba(248, 250, 252, 0.5);
   border-top-right-radius: 0.5rem;
   border-bottom-right-radius: 0.5rem;
-  color: #0369a1;
+  color: #64748b;
   font-style: italic;
 }

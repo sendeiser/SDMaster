@@ -11,6 +11,16 @@ import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
 import RichEditor, { mdComponents as richMdComponents } from './RichEditor';
+import { marked } from 'marked';
+import TurndownService from 'turndown';
+import { gfm } from 'turndown-plugin-gfm';
+
+// Iniciar turndown globalmente
+const turndownService = new TurndownService({
+    headingStyle: 'atx',
+    codeBlockStyle: 'fenced'
+});
+turndownService.use(gfm);
 
 const SequenceGenerator = ({ isSidebarOpen, setIsSidebarOpen }) => {
     const [formData, setFormData] = useState({
@@ -263,7 +273,23 @@ const SequenceGenerator = ({ isSidebarOpen, setIsSidebarOpen }) => {
 
     const toggleEdit = () => {
         if (isEditing) {
-            setResult(editableContent);
+            try {
+                // Saliendo del modo edición (WYSIWYG -> MD)
+                const markdownContent = turndownService.turndown(editableContent);
+                setResult(markdownContent);
+            } catch (err) {
+                console.error("Error convirtiendo HTML a MD", err);
+                setResult(editableContent);
+            }
+        } else {
+            try {
+                // Entrando al modo edición (MD -> WYSIWYG/HTML)
+                const htmlContent = marked.parse(result || '');
+                setEditableContent(htmlContent);
+            } catch (err) {
+                console.error("Error convirtiendo MD a HTML", err);
+                setEditableContent(result || '');
+            }
         }
         setIsEditing(!isEditing);
     };
