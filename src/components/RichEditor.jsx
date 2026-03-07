@@ -28,36 +28,17 @@ const mdComponents = {
     a: ({ href, children }) => <a href={href} target="_blank" rel="noopener noreferrer" className="text-brand-600 hover:text-brand-800 underline underline-offset-2 transition-colors">{children}</a>,
     img: ({ src, alt }) => <img src={src} alt={alt} className="max-w-full rounded-xl my-4 shadow-md" />,
     table: ({ children }) => (
-        <div className="overflow-x-auto my-4 rounded-xl border border-slate-200">
-            <table className="w-full text-sm">{children}</table>
+        <div className="my-4">
+            <table>{children}</table>
         </div>
     ),
-    th: ({ children }) => <th className="px-4 py-2 bg-slate-50 text-left text-xs font-bold text-slate-600 uppercase tracking-wider border-b border-slate-200">{children}</th>,
-    td: ({ children }) => <td className="px-4 py-2 text-slate-700 border-b border-slate-100">{children}</td>,
+    th: ({ children }) => <th>{children}</th>,
+    td: ({ children }) => <td>{children}</td>,
     hr: () => <hr className="my-6 border-slate-200" />,
 };
 
-// Configuramos los módulos de Quill (Herramientas disponibles)
-const modules = {
-    toolbar: [
-        [{ 'header': [1, 2, 3, false] }],
-        ['bold', 'italic', 'underline', 'strike'],        // toggled buttons
-        ['blockquote', 'code-block'],
-        [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-        [{ 'script': 'sub' }, { 'script': 'super' }],      // superscript/subscript
-        [{ 'indent': '-1' }, { 'indent': '+1' }],          // outdent/indent
-        [{ 'color': [] }, { 'background': [] }],          // dropdown with defaults from theme
-        [{ 'align': [] }],
-        ['link', 'image', 'video'],
-        ['clean']                                         // remove formatting button
-    ],
-    history: {
-        delay: 1000,
-        maxStack: 50,
-        userOnly: true
-    }
-};
-
+// Extraemos modules al interior del componente para poder usar refs
+// formats se puede quedar fuera
 const formats = [
     'header',
     'bold', 'italic', 'underline', 'strike',
@@ -67,17 +48,53 @@ const formats = [
     'indent',
     'color', 'background',
     'align',
-    'link', 'image', 'video'
+    'link', 'image', 'video',
+    'table'
 ];
 
-const RichEditor = ({ value, onChange, fontFamily = "'Inter', sans-serif" }) => {
-    // Si la entrada es un markdown inicial, habría que convertirlo a HTML usando marked o un render() on mount.
-    // Para simplificar y dado que el nuevo editor maneja HTML nativo como foros/word:
-    // Asumiremos que el valor de entrada se trata como text/html. Si SequenceGenerator le pasa markdown puro,
-    // se verá como texto plano la primera vez, pero el usuario puede formatear visualmente y onChange devolverá HTLM limpio.
 
-    // Convertir de MD a HTML en montaje inicial si es necesario, 
-    // pero idealmente 'value' aquí va a ser HTML después de la primera edición.
+
+const RichEditor = ({ value, onChange, fontFamily = "'Inter', sans-serif" }) => {
+    const quillRef = useRef(null);
+
+    const imageHandler = () => {
+        const tooltip = quillRef.current.getEditor().theme.tooltip;
+        const url = prompt('Ingrese la URL de la imagen:');
+
+        if (url) {
+            const editor = quillRef.current.getEditor();
+            const range = editor.getSelection(true);
+            editor.insertEmbed(range.index, 'image', url);
+            editor.setSelection(range.index + 1);
+        }
+    };
+
+    const modules = React.useMemo(() => ({
+        toolbar: {
+            container: [
+                [{ 'header': [1, 2, 3, false] }],
+                ['bold', 'italic', 'underline', 'strike'],
+                ['blockquote', 'code-block'],
+                [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                [{ 'script': 'sub' }, { 'script': 'super' }],
+                [{ 'indent': '-1' }, { 'indent': '+1' }],
+                [{ 'color': [] }, { 'background': [] }],
+                [{ 'align': [] }],
+                ['link', 'image', 'video'],
+                ['table'],
+                ['clean']
+            ],
+            handlers: {
+                image: imageHandler
+            }
+        },
+        table: true,
+        history: {
+            delay: 1000,
+            maxStack: 50,
+            userOnly: true
+        }
+    }), []);
 
     const countWords = (htmlStr) => {
         if (!htmlStr) return 0;
@@ -123,6 +140,7 @@ const RichEditor = ({ value, onChange, fontFamily = "'Inter', sans-serif" }) => 
             {/* Contenedor del Editor Quill */}
             <div className="quill-premium-wrapper" style={{ fontFamily }}>
                 <ReactQuill
+                    ref={quillRef}
                     theme="snow"
                     value={value}
                     onChange={onChange}

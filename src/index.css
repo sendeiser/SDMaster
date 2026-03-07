@@ -262,3 +262,63 @@ body {
   color: #64748b;
   font-style: italic;
 }
+
+/* --- Global Premium Table Styles --- */
+.table-wrapper {
+  overflow-x: auto;
+  margin: 2rem 0;
+  width: 100%;
+  -webkit-overflow-scrolling: touch;
+}
+
+table {
+  width: 100% !important;
+  min-width: 600px;
+  /* Ensure table has enough space to be readable */
+  table-layout: auto;
+  border-collapse: collapse;
+  background-color: #ffffff;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+}
+
+@media (min-width: 1024px) {
+  table {
+    table-layout: fixed;
+    min-width: 100%;
+  }
+}
+
+
+th {
+  background-color: #f8fafc;
+  color: #1e293b;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  padding: 1rem;
+  border-bottom: 2px solid #e2e8f0;
+  text-align: left;
+}
+
+td {
+  padding: 1rem;
+  border-bottom: 1px solid #f1f5f9;
+  color: #475569;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  vertical-align: top;
+  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+tr:last-child td {
+  border-bottom: none;
+}
+
+tr:hover td {
+  background-color: #f8fafc;
+}

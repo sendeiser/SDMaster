@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Sparkles, BookType, Calendar, Clock, Loader2, Copy, Check, ArrowRight, FileDown, History, Trash2, ChevronRight, FileText, Video, Edit3, Eye, FileOutput, MessageSquare, Database } from 'lucide-react';
+import { Sparkles, BookType, Calendar, Clock, Loader2, Copy, Check, ArrowRight, FileDown, History, Trash2, ChevronRight, FileText, Video, Edit3, Eye, FileOutput, MessageSquare, Database, CloudUpload, Lock, Globe } from 'lucide-react';
 import { saveAs } from 'file-saver';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -7,8 +7,10 @@ import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import { antigravityService } from '../services/antigravityService';
 import { ragService } from '../services/ragService';
+import { sequenceDbService } from '../lib/sequenceDbService';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
+import rehypeRaw from 'rehype-raw';
 import 'katex/dist/katex.min.css';
 import RichEditor, { mdComponents as richMdComponents } from './RichEditor';
 import { marked } from 'marked';
@@ -22,13 +24,30 @@ const turndownService = new TurndownService({
 });
 turndownService.use(gfm);
 
-const SequenceGenerator = ({ isSidebarOpen, setIsSidebarOpen }) => {
+// Sobreescribir el método escape por defecto para proteger LaTeX (\) pero mantener el resto
+turndownService.escape = function (string) {
+    // Escapamos los caracteres especiales de MD, pero PROTEGEMOS el backslash
+    return string
+        .replace(/(\*|_|~|`|\[|\]|#|&|<|>|\|)/g, (match) => {
+            // No escapamos el pipe | si queremos tablas GFM, 
+            // pero turndown-plugin-gfm suele manejarlo.
+            // Para estar seguros de que LaTeX (\) no se escape, NO incluimos \ en el regex de arriba.
+            if (match === '|') return match; // Dejar pipes intactos para tablas
+            return '\\' + match;
+        })
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+};
+
+const SequenceGenerator = ({ isSidebarOpen, setIsSidebarOpen, session, loadedSequence, clearLoadedSequence }) => {
     const [formData, setFormData] = useState({
         subject: '',
         year: '',
         topic: '',
         duration: '',
         structure: 'Tradicional',
+        theme: 'classic',
         templateSource: 'None',
         includeMedia: true,
         suggestions: ''
@@ -49,6 +68,10 @@ const SequenceGenerator = ({ isSidebarOpen, setIsSidebarOpen }) => {
     const [isDocsOpen, setIsDocsOpen] = useState(false);
     const [fontFamily, setFontFamily] = useState("'Inter', sans-serif");
 
+    // Estados para Guardado en Nube
+    const [isSavingCloud, setIsSavingCloud] = useState(false);
+    const [showSaveModal, setShowSaveModal] = useState(false);
+
     // Listen for font changes from RichEditor
     useEffect(() => {
         const handler = (e) => setFontFamily(e.detail);
@@ -56,16 +79,64 @@ const SequenceGenerator = ({ isSidebarOpen, setIsSidebarOpen }) => {
         return () => document.removeEventListener('editor-font-change', handler);
     }, []);
 
+    // Effect to automatically load a sequence when redirected from Community / My Sequences
+    useEffect(() => {
+        if (loadedSequence) {
+            setFormData({
+                subject: loadedSequence.subject || '',
+                year: loadedSequence.year || '',
+                topic: loadedSequence.topic || '',
+                duration: loadedSequence.duration || '',
+                structure: loadedSequence.structure || 'Secuencia Didáctica Estándar',
+                theme: loadedSequence.theme || 'classic',
+                templateSource: 'None',
+                includeMedia: true,
+                suggestions: ''
+            });
+            setResult(loadedSequence.content || '');
+
+            // Switch to preview mode to show the exact design
+            setIsEditing(false);
+
+            // Si está en modo WYSIWYG internamente igual actualizamos el contenido por si luego lo abren
+            try {
+                setEditableContent(marked.parse(loadedSequence.content || ''));
+            } catch (e) {
+                console.error(e);
+            }
+
+            // Limpia el flag para no volver a cargar
+            if (clearLoadedSequence) clearLoadedSequence();
+        }
+    }, [loadedSequence, clearLoadedSequence]);
+
     const resultRef = useRef(null);
 
-    // Cargar historial y documentos al inicio
+    // Cargar historial, documentos y PREFERENCIAS al inicio
     useEffect(() => {
+        // --- Preferencias de Configuración ---
+        const prefsStr = localStorage.getItem('sd_preferences');
+        if (prefsStr) {
+            try {
+                const prefs = JSON.parse(prefsStr);
+                setFormData(prev => ({
+                    ...prev,
+                    duration: prev.duration || prefs.defaultDuration || '2h',
+                    theme: prev.theme !== 'classic' ? prev.theme : (prefs.defaultTheme || 'classic'),
+                    structure: prev.structure !== 'Tradicional' ? prev.structure : (prefs.defaultStructure || 'Tradicional')
+                }));
+            } catch (e) {
+                console.error("Error cargando preferencias", e);
+            }
+        }
+
+        // --- Historial ---
         const savedHistory = localStorage.getItem('sd_history');
         if (savedHistory) {
             try {
                 setHistory(JSON.parse(savedHistory));
             } catch (e) {
-                console.error("Error cargando historial:", e);
+                console.error("Error al parsear el historial", e);
             }
         }
         loadIndexedDocs();
@@ -294,6 +365,59 @@ const SequenceGenerator = ({ isSidebarOpen, setIsSidebarOpen }) => {
         setIsEditing(!isEditing);
     };
 
+    const handleCloudSaveClick = () => {
+        if (!session) {
+            setNotification({
+                type: 'warning',
+                message: 'No Autenticado',
+                detail: 'Debes iniciar sesión para poder guardar las secuencias en la nube.',
+                autoDismiss: 4000
+            });
+            return;
+        }
+        setShowSaveModal(true);
+    };
+
+    const confirmCloudSave = async (isPublic) => {
+        setIsSavingCloud(true);
+        setShowSaveModal(false);
+        try {
+            // Pasamos un objeto con los datos a guardar. Incluimos el contenido final (ya sea resultado o el markdown si sale de edición)
+            let finalContent = result;
+            if (isEditing) {
+                finalContent = turndownService.turndown(editableContent);
+                setResult(finalContent);
+            }
+
+            await sequenceDbService.saveSequence({
+                subject: formData.subject,
+                year: formData.year,
+                topic: formData.topic,
+                duration: formData.duration,
+                structure: formData.structure,
+                theme: formData.theme,
+                content: finalContent
+            }, isPublic);
+
+            setNotification({
+                type: 'success',
+                message: '¡Guardado con éxito!',
+                detail: `Tu secuencia fue guardada en la nube y es ${isPublic ? 'Pública' : 'Privada'}.`,
+                autoDismiss: 4000
+            });
+        } catch (error) {
+            console.error("Error confirm cloud save:", error);
+            setNotification({
+                type: 'error',
+                message: 'Error al Guardar',
+                detail: error.message || 'No se pudo guardar la secuencia en la base de datos.',
+                autoDismiss: 5000
+            });
+        } finally {
+            setIsSavingCloud(false);
+        }
+    };
+
     const insertFormat = (symbol, placeholder = "texto") => {
         const textarea = document.getElementById('editor-textarea');
         if (!textarea) return;
@@ -368,66 +492,108 @@ const SequenceGenerator = ({ isSidebarOpen, setIsSidebarOpen }) => {
         setHistory(prev => prev.filter(item => item.id !== id));
     };
 
-    // Componentes personalizados para ReactMarkdown
-    const MarkdownComponents = {
-        h1: ({ children }) => <h1 className="text-3xl font-black text-slate-900 border-b-2 border-brand-500 pb-2 mb-6 mt-8">{children}</h1>,
-        h2: ({ children }) => <h2 className="text-xl font-bold text-slate-800 border-l-4 border-brand-400 pl-3 mb-4 mt-6">{children}</h2>,
-        h3: ({ children }) => <h3 className="text-lg font-bold text-slate-700 mb-3 mt-5">{children}</h3>,
-        p: ({ children }) => {
-            // Evitar error de hidratación: si el hijo es un bloque (div), renderizar como div
-            const hasBlock = React.Children.toArray(children).some(
-                child => React.isValidElement(child) && (child.type === 'div' || child.props?.className?.includes('my-8'))
-            );
-            return hasBlock ?
-                <div className="mb-4">{children}</div> :
-                <p className="text-slate-600 leading-relaxed mb-4 text-sm md:text-base">{children}</p>;
-        },
-        ul: ({ children }) => <ul className="list-disc list-outside ml-5 mb-4 space-y-2 text-slate-600">{children}</ul>,
-        ol: ({ children }) => <ol className="list-decimal list-outside ml-5 mb-4 space-y-2 text-slate-600">{ol_children(children)}</ol>,
-        li: ({ children }) => <li className="pl-1">{children}</li>,
-        blockquote: ({ children }) => <blockquote className="border-l-4 border-slate-200 pl-4 py-2 italic text-slate-500 my-6 bg-slate-50/50 rounded-r-lg">{children}</blockquote>,
-        table: ({ children }) => (
-            <div className="overflow-x-auto my-8 rounded-xl border border-slate-200 shadow-sm">
-                <table className="w-full text-left border-collapse bg-white">
-                    {children}
-                </table>
-            </div>
-        ),
-        thead: ({ children }) => <thead className="bg-slate-50 border-b border-slate-200">{children}</thead>,
-        th: ({ children }) => <th className="px-4 py-3 text-sm font-bold text-slate-800 uppercase tracking-wider">{children}</th>,
-        td: ({ children }) => <td className="px-4 py-3 text-sm text-slate-600 border-b border-slate-100">{children}</td>,
-        img: ({ src, alt }) => (
-            <div className="my-8 rounded-2xl overflow-hidden shadow-lg border-4 border-white">
-                <img src={src} alt={alt} className="w-full object-cover max-h-[400px]" />
-                {alt && <p className="text-center text-xs text-slate-400 mt-2 italic">{alt}</p>}
-            </div>
-        ),
-        a: ({ href, children }) => {
-            if (href?.includes('youtube.com')) {
-                return (
-                    <div className="my-6 p-4 bg-red-50 rounded-2xl border border-red-100 flex items-center justify-between group hover:border-red-200 transition-all">
-                        <div className="flex items-center space-x-3">
-                            <div className="p-2 bg-red-600 text-white rounded-lg shadow-md group-hover:scale-110 transition-transform">
-                                <Video size={20} />
-                            </div>
-                            <div>
-                                <p className="text-sm font-bold text-red-900">{children}</p>
-                                <p className="text-xs text-red-600">Recurso audiovisual sugerido</p>
-                            </div>
-                        </div>
-                        <a
-                            href={href}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="px-4 py-2 bg-white text-red-600 text-xs font-bold rounded-xl border border-red-200 shadow-sm hover:bg-red-600 hover:text-white transition-all uppercase tracking-wider"
-                        >
-                            Ver en YouTube
-                        </a>
-                    </div>
-                );
+    // Componentes personalizados dinámicos según el tema visual seleccionado
+    const getMarkdownComponents = (theme) => {
+        const themes = {
+            classic: {
+                h1: "text-3xl font-black text-slate-900 border-b-2 border-brand-500 pb-2 mb-6 mt-8 p-1",
+                h2: "text-xl font-bold text-slate-800 border-l-4 border-brand-400 pl-3 mb-4 mt-6",
+                h3: "text-lg font-bold text-slate-700 mb-3 mt-5",
+                p: "text-slate-600 leading-relaxed mb-4 text-sm md:text-base break-words whitespace-pre-wrap",
+                quote: "border-l-4 border-slate-200 pl-4 py-2 italic text-slate-500 my-6 bg-slate-50/50 rounded-r-lg",
+                tableHeader: "bg-slate-50 border-b border-slate-200 text-slate-800",
+                link: "text-brand-600 hover:text-brand-800 underline",
+            },
+            minimalist: {
+                h1: "text-3xl font-light text-slate-900 border-b border-slate-200 pb-2 mb-6 mt-8 tracking-tight p-1",
+                h2: "text-xl font-medium text-slate-800 mb-4 mt-6",
+                h3: "text-lg font-medium text-slate-700 mb-3 mt-5",
+                p: "text-slate-700 leading-loose mb-4 text-sm md:text-base break-words whitespace-pre-wrap",
+                quote: "border-l-2 border-slate-800 pl-4 py-2 italic text-slate-600 my-6",
+                tableHeader: "bg-white border-b-2 border-slate-900 text-slate-900",
+                link: "text-slate-900 hover:text-slate-600 underline decoration-1",
+            },
+            colorful: {
+                h1: "text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-teal-500 mb-6 mt-8 p-1",
+                h2: "text-xl font-black text-emerald-800 bg-emerald-50 px-3 py-1 rounded-lg inline-block mb-4 mt-6",
+                h3: "text-lg font-bold text-teal-700 mb-3 mt-5",
+                p: "text-slate-700 leading-relaxed mb-4 text-sm md:text-base break-words whitespace-pre-wrap",
+                quote: "border-l-4 border-emerald-400 pl-4 py-2 italic text-emerald-700 my-6 bg-emerald-50/50 rounded-r-lg shadow-sm",
+                tableHeader: "bg-emerald-50 border-b-2 border-emerald-200 text-emerald-800",
+                link: "text-emerald-600 hover:text-emerald-800 font-bold underline decoration-wavy",
+            },
+            academic: {
+                h1: "text-3xl font-bold text-black border-b-2 border-black pb-2 mb-6 mt-8 font-serif uppercase tracking-wider text-center p-1",
+                h2: "text-xl font-bold text-black border-b border-gray-300 pb-1 mb-4 mt-6 font-serif",
+                h3: "text-lg font-bold text-black mb-3 mt-5 font-serif italic",
+                p: "text-black leading-relaxed mb-4 text-sm md:text-base break-words whitespace-pre-wrap font-serif text-justify",
+                quote: "pl-8 pr-8 py-2 italic text-gray-700 my-6 font-serif border-l-4 border-gray-300",
+                tableHeader: "bg-gray-100 border-b border-black text-black font-serif",
+                link: "text-blue-800 hover:text-blue-900 underline font-serif",
             }
-            return <a href={href} target="_blank" rel="noopener noreferrer" className="text-brand-600 hover:underline">{children}</a>;
-        }
+        };
+
+        const t = themes[theme] || themes.classic;
+
+        return {
+            h1: ({ children }) => <h1 className={t.h1}>{children}</h1>,
+            h2: ({ children }) => <h2 className={t.h2}>{children}</h2>,
+            h3: ({ children }) => <h3 className={t.h3}>{children}</h3>,
+            p: ({ children }) => {
+                const hasBlock = React.Children.toArray(children).some(
+                    child => React.isValidElement(child) && (child.type === 'div' || child.props?.className?.includes('my-8'))
+                );
+                return hasBlock ?
+                    <div className="mb-4 break-words whitespace-pre-wrap">{children}</div> :
+                    <p className={t.p}>{children}</p>;
+            },
+            ul: ({ children }) => <ul className={`list-disc list-outside ml-5 mb-4 space-y-2 break-words whitespace-pre-wrap ${theme === 'academic' ? 'font-serif text-black' : 'text-slate-600'}`}>{children}</ul>,
+            ol: ({ children }) => <ol className={`list-decimal list-outside ml-5 mb-4 space-y-2 break-words whitespace-pre-wrap ${theme === 'academic' ? 'font-serif text-black' : 'text-slate-600'}`}>{children}</ol>,
+            li: ({ children }) => <li className="pl-1 break-words">{children}</li>,
+            blockquote: ({ children }) => <blockquote className={t.quote}>{children}</blockquote>,
+            table: ({ children }) => (
+                <div className="table-wrapper">
+                    <table>
+                        {children}
+                    </table>
+                </div>
+            ),
+            thead: ({ children }) => <thead>{children}</thead>,
+            th: ({ children }) => <th>{children}</th>,
+            td: ({ children }) => <td>{children}</td>,
+            img: ({ src, alt }) => (
+                <div className="my-8 rounded-2xl overflow-hidden shadow-lg border-4 border-white">
+                    <img src={src} alt={alt} className="w-full object-cover max-h-[400px]" />
+                    {alt && <p className={`text-center text-xs mt-2 italic ${theme === 'academic' ? 'font-serif text-gray-600' : 'text-slate-400'}`}>{alt}</p>}
+                </div>
+            ),
+            a: ({ href, children }) => {
+                if (href?.includes('youtube.com')) {
+                    return (
+                        <div className="my-6 p-4 bg-red-50 rounded-2xl border border-red-100 flex items-center justify-between group hover:border-red-200 transition-all">
+                            <div className="flex items-center space-x-3">
+                                <div className="p-2 bg-red-600 text-white rounded-lg shadow-md group-hover:scale-110 transition-transform">
+                                    <Video size={20} />
+                                </div>
+                                <div>
+                                    <p className="text-sm font-bold text-red-900">{children}</p>
+                                    <p className="text-xs text-red-600">Recurso audiovisual sugerido</p>
+                                </div>
+                            </div>
+                            <a
+                                href={href}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-4 py-2 bg-white text-red-600 text-xs font-bold rounded-xl border border-red-200 shadow-sm hover:bg-red-600 hover:text-white transition-all uppercase tracking-wider"
+                            >
+                                Ver en YouTube
+                            </a>
+                        </div>
+                    );
+                }
+                return <a href={href} target="_blank" rel="noopener noreferrer" className={t.link}>{children}</a>;
+            }
+        };
     };
 
     function ol_children(nodes) {
@@ -435,12 +601,20 @@ const SequenceGenerator = ({ isSidebarOpen, setIsSidebarOpen }) => {
     }
 
     return (
-        <div className="flex-grow flex overflow-hidden relative">
+        <div className="flex-grow flex overflow-hidden relative w-full">
+            {/* Sidebar Overlay for Mobile */}
+            {isSidebarOpen && (
+                <div
+                    className="lg:hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40"
+                    onClick={() => setIsSidebarOpen(false)}
+                />
+            )}
+
             {/* Sidebar - Formulario de Configuración */}
             <aside
                 className={`
-                    absolute inset-y-0 left-0 z-10 w-80 bg-white border-r border-slate-200 transition-all duration-500 transform
-                    lg:relative lg:translate-x-0
+                    fixed inset-y-0 left-0 z-50 w-80 bg-white border-r border-slate-200 transition-all duration-500 transform
+                    lg:relative lg:translate-x-0 lg:z-10
                     ${isSidebarOpen ? 'translate-x-0 opacity-100' : '-translate-x-full opacity-0 lg:w-0'}
                 `}
             >
@@ -452,8 +626,8 @@ const SequenceGenerator = ({ isSidebarOpen, setIsSidebarOpen }) => {
                             <InputField label="Año / Curso" icon={<Calendar size={16} />} name="year" value={formData.year} onChange={handleInputChange} placeholder="Ej. 3er Año" />
                             <InputField label="Tema" icon={<Sparkles size={16} />} name="topic" value={formData.topic} onChange={handleInputChange} placeholder="Ej. Ecuaciones" />
 
+                            <InputField label="Duración" icon={<Clock size={16} />} name="duration" value={formData.duration} onChange={handleInputChange} placeholder="2h" />
                             <div className="grid grid-cols-2 gap-3">
-                                <InputField label="Duración" icon={<Clock size={16} />} name="duration" value={formData.duration} onChange={handleInputChange} placeholder="2h" />
                                 <SelectField
                                     label="Enfoque"
                                     name="structure"
@@ -465,6 +639,18 @@ const SequenceGenerator = ({ isSidebarOpen, setIsSidebarOpen }) => {
                                         { value: 'Flipped', label: 'Invertida' },
                                         { value: 'Gamificación', label: 'Juego' },
                                         { value: 'Kolb', label: 'Kolb' }
+                                    ]}
+                                />
+                                <SelectField
+                                    label="Tema Visual"
+                                    name="theme"
+                                    value={formData.theme}
+                                    onChange={handleInputChange}
+                                    options={[
+                                        { value: 'classic', label: 'Clásico' },
+                                        { value: 'minimalist', label: 'Minimalista' },
+                                        { value: 'colorful', label: 'Dinámico' },
+                                        { value: 'academic', label: 'Académico' }
                                     ]}
                                 />
                             </div>
@@ -645,7 +831,54 @@ const SequenceGenerator = ({ isSidebarOpen, setIsSidebarOpen }) => {
                     </div>
                 )}
 
-                {/* Floating Toolbar - Solo cuando hay resultado */}
+                {/* Save Modal */}
+                {showSaveModal && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-fade-in overflow-y-auto">
+                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-slide-up relative my-auto">
+                            <div className="p-6">
+                                <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight mb-2">Guardar en la Nube</h3>
+                                <p className="text-sm text-slate-500 mb-6">Elige la visibilidad para esta secuencia en la plataforma.</p>
+
+                                <div className="space-y-3">
+                                    <button
+                                        onClick={() => confirmCloudSave(false)}
+                                        className="w-full flex items-center p-3 sm:p-4 border-2 border-slate-200 rounded-xl hover:border-brand-500 hover:bg-brand-50 transition-all text-left group"
+                                    >
+                                        <div className="p-2 bg-slate-100 rounded-lg group-hover:bg-brand-100 group-hover:text-brand-600 transition-colors mr-4">
+                                            <Lock size={20} />
+                                        </div>
+                                        <div>
+                                            <p className="font-bold text-slate-800">Privado</p>
+                                            <p className="text-xs text-slate-500">Solo tú podrás verla en Mis Secuencias.</p>
+                                        </div>
+                                    </button>
+
+                                    <button
+                                        onClick={() => confirmCloudSave(true)}
+                                        className="w-full flex items-center p-3 sm:p-4 border-2 border-slate-200 rounded-xl hover:border-emerald-500 hover:bg-emerald-50 transition-all text-left group"
+                                    >
+                                        <div className="p-2 bg-slate-100 rounded-lg group-hover:bg-emerald-100 group-hover:text-emerald-600 transition-colors mr-4">
+                                            <Globe size={20} />
+                                        </div>
+                                        <div>
+                                            <p className="font-bold text-slate-800">Público</p>
+                                            <p className="text-xs text-slate-500">Aparecerá en el repositorio comunitario.</p>
+                                        </div>
+                                    </button>
+                                </div>
+
+                                <button
+                                    onClick={() => setShowSaveModal(false)}
+                                    className="w-full mt-4 py-3 text-sm font-bold text-slate-400 hover:text-slate-600 transition-colors"
+                                >
+                                    Cancelar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Floating Action Menu - Responsive Design */}
                 {result && !isGenerating && (
                     <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1 bg-white/90 backdrop-blur-xl px-3 py-2 rounded-full shadow-2xl shadow-slate-900/10 border border-white/80 animate-fade-in-up whitespace-nowrap">
                         <ToolbarButton onClick={handleCopy} icon={copied ? <Check size={15} className="text-green-500" /> : <Copy size={15} />} label={copied ? "Copiado" : "Copiar"} />
@@ -655,6 +888,8 @@ const SequenceGenerator = ({ isSidebarOpen, setIsSidebarOpen }) => {
                             label={isEditing ? "Ver Doc" : "Editar"}
                             highlighted={isEditing}
                         />
+                        <div className="w-px h-5 bg-slate-200 mx-1" />
+                        <ToolbarButton onClick={handleCloudSaveClick} icon={isSavingCloud ? <Loader2 size={15} className="animate-spin" /> : <CloudUpload size={15} />} label={isSavingCloud ? "Guardando" : "Guardar Nube"} color="text-brand-600 font-bold" />
                         <div className="w-px h-5 bg-slate-200 mx-1" />
                         <ToolbarButton onClick={downloadWord} icon={<FileOutput size={15} />} label="Word" />
                         <ToolbarButton onClick={downloadPDF} icon={<FileDown size={15} />} label="PDF" highlighted />
@@ -688,7 +923,7 @@ const SequenceGenerator = ({ isSidebarOpen, setIsSidebarOpen }) => {
                                 <div
                                     ref={resultRef}
                                     id="pdf-content"
-                                    className="bg-white px-10 md:px-20 py-16 shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-slate-100 min-h-[1056px] relative overflow-visible"
+                                    className="bg-white px-10 md:px-20 py-16 shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-slate-100 min-h-[1056px] relative overflow-hidden break-words"
                                     style={{ fontFamily: fontFamily }}
                                 >
                                     {/* Membrete Minimalista Profesional (Sin marca de agua) */}
@@ -705,8 +940,8 @@ const SequenceGenerator = ({ isSidebarOpen, setIsSidebarOpen }) => {
 
                                     <ReactMarkdown
                                         remarkPlugins={[remarkGfm, remarkMath]}
-                                        rehypePlugins={[rehypeKatex]}
-                                        components={MarkdownComponents}
+                                        rehypePlugins={[rehypeKatex, rehypeRaw]}
+                                        components={getMarkdownComponents(formData.theme)}
                                     >
                                         {result}
                                     </ReactMarkdown>
