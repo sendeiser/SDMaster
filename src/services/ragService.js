@@ -79,9 +79,10 @@ export const ragService = {
     /**
      * Procesa un documento: extrae texto, hace chunks, genera embeddings y los guarda
      * ESTRICTAMENTE SECUENCIAL para respetar las 15 RPM del Plan Gratuito
+     * @param {string} category - 'Plantilla' o 'Información'
      */
-    async processAndStoreDocument(fileName, text, onProgress = null) {
-        console.log(`Iniciando procesamiento secuencial de: ${fileName}`);
+    async processAndStoreDocument(fileName, text, category = 'Información', onProgress = null) {
+        console.log(`Iniciando procesamiento secuencial de: ${fileName} como ${category}`);
         const chunks = this.chunkText(text, 1500, 300);
         const totalChunks = chunks.length;
         let processedCount = 0;
@@ -93,7 +94,7 @@ export const ragService = {
                 const embedding = await this.getEmbedding(chunk);
                 const { error } = await supabase.from('documents').insert({
                     content: chunk,
-                    metadata: { source: fileName, chunk_index: i },
+                    metadata: { source: fileName, chunk_index: i, category: category },
                     embedding: embedding
                 });
 
@@ -119,21 +120,44 @@ export const ragService = {
     },
 
     /**
-     * Busca los fragmentos más relevantes basados en la consulta del usuario
-     */
-    async retrieveContext(query, limit = 5) {
+    * Busca los fragmentos más relevantes basados en la consulta del usuario
+    * @param {string} query - Consulta de búsqueda
+    * @param {number} limit - Cantidad de resultados
+    * @param {string[]} categories - Categorías permitidas (opcional)
+    * @param {string[]} sources - Documentos específicos permitidos (opcional)
+    */
+    async retrieveContext(query, limit = 5, categories = null, sources = null) {
         try {
             const queryEmbedding = await this.getEmbedding(query);
+
+            // La función match_documents de Supabase busca por proximidad vectorial.
+            // Los filtros adicionales los aplicamos antes de la búsqueda si la función lo soporta,
+            // o en este caso, recuperamos más resultados y filtramos en JS si es necesario.
             const { data, error } = await supabase.rpc('match_documents', {
                 query_embedding: queryEmbedding,
-                match_threshold: 0.5,
-                match_count: limit
+                match_threshold: 0.3, // Bajamos un poco el umbral para tener más donde filtrar
+                match_count: limit * 2 // Traemos el doble para filtrar
             });
-            if (error) {
-                console.warn("No se pudo obtener contexto:", error);
-                return [];
+
+            if (error) throw error;
+
+            let filteredResults = data;
+
+            // Filtrar por categorías si se especifican
+            if (categories && categories.length > 0) {
+                filteredResults = filteredResults.filter(doc =>
+                    categories.includes(doc.metadata?.category)
+                );
             }
-            return data;
+
+            // Filtrar por fuentes si se especifican
+            if (sources && sources.length > 0) {
+                filteredResults = filteredResults.filter(doc =>
+                    sources.includes(doc.metadata?.source)
+                );
+            }
+
+            return filteredResults.slice(0, limit);
         } catch (err) {
             console.error("Error recuperando contexto:", err);
             return [];
@@ -157,21 +181,30 @@ export const ragService = {
     },
 
     /**
-     * Lista los nombres únicos de documentos indexados
-     */
+    * Lista los nombres únicos de documentos indexados con su categoría
+    */
     async fetchUniqueDocuments() {
         try {
-            // Obtenemos solo los nombres de fuentes únicos de los metadatos
             const { data, error } = await supabase
                 .from('documents')
-                .select('metadata->source');
+                .select('metadata');
 
             if (error) throw error;
 
-            // Procesamiento en el cliente para obtener únicos
-            const sources = [...new Set(data.map(d => d.source).filter(Boolean))];
-            console.log("[RAG] Documentos únicos cargeados:", sources.length);
-            return sources;
+            // Procesamiento para obtener documentos únicos con sus categorías
+            const uniqueDocs = [];
+            const seen = new Set();
+
+            data.forEach(item => {
+                const source = item.metadata?.source;
+                const category = item.metadata?.category || 'Información';
+                if (source && !seen.has(source)) {
+                    seen.add(source);
+                    uniqueDocs.push({ name: source, category });
+                }
+            });
+
+            return uniqueDocs;
         } catch (err) {
             console.error("[RAG] Error fetchUniqueDocuments:", err);
             return [];
@@ -213,6 +246,36 @@ export const ragService = {
             return { success: true };
         } catch (err) {
             console.error("Error eliminando documento:", err);
+            throw err;
+        }
+    },
+
+    /**
+     * Actualiza la categoría de todos los fragmentos asociados a un documento
+     */
+    async updateDocumentCategory(sourceName, newCategory) {
+        try {
+            const { data: chunks, error: fetchError } = await supabase
+                .from('documents')
+                .select('id, metadata')
+                .filter('metadata->>source', 'eq', sourceName);
+
+            if (fetchError) throw fetchError;
+
+            for (const chunk of chunks) {
+                const updatedMetadata = { ...chunk.metadata, category: newCategory };
+                const { error: updateError } = await supabase
+                    .from('documents')
+                    .update({ metadata: updatedMetadata })
+                    .eq('id', chunk.id);
+
+                if (updateError) throw updateError;
+            }
+
+            console.log(`Categoría de '${sourceName}' actualizada a '${newCategory}'.`);
+            return { success: true };
+        } catch (err) {
+            console.error("Error actualizando categoría:", err);
             throw err;
         }
     }

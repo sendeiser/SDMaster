@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Sparkles, BookType, Calendar, Clock, Loader2, Copy, Check, Wand2, ArrowRight, FileDown, History, Trash2, ChevronRight, FileText, Video, Edit3, Save, FileOutput, Cloud, Share2, PanelLeftClose, PanelLeftOpen, Maximize2, Minimize2, HardDrive, Link, Type } from 'lucide-react';
+import { Sparkles, BookType, Calendar, Clock, Loader2, Copy, Check, ArrowRight, FileDown, History, Trash2, ChevronRight, FileText, Video, Edit3, Eye, FileOutput, MessageSquare, Database } from 'lucide-react';
 import { saveAs } from 'file-saver';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -7,11 +7,10 @@ import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import { antigravityService } from '../services/antigravityService';
 import { ragService } from '../services/ragService';
-import { cloudService } from '../services/cloudService';
-import { googleDriveService } from '../services/googleDriveService';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
+import RichEditor, { mdComponents as richMdComponents } from './RichEditor';
 
 const SequenceGenerator = ({ isSidebarOpen, setIsSidebarOpen }) => {
     const [formData, setFormData] = useState({
@@ -21,20 +20,31 @@ const SequenceGenerator = ({ isSidebarOpen, setIsSidebarOpen }) => {
         duration: '',
         structure: 'Tradicional',
         templateSource: 'None',
-        includeMedia: true
+        includeMedia: true,
+        suggestions: ''
     });
 
-    const [existingDocs, setExistingDocs] = useState([]);
+    const [existingDocs, setExistingDocs] = useState([]); // Ahora será [{name, category}]
+    const [selectedDocs, setSelectedDocs] = useState([]);
+    const [selectedCategories, setSelectedCategories] = useState(['Plantilla', 'Información']);
     const [isGenerating, setIsGenerating] = useState(false);
     const [result, setResult] = useState(null);
+    const [notification, setNotification] = useState(null); // { type: 'error'|'warning', message, detail }
     const [isEditing, setIsEditing] = useState(false);
     const [editableContent, setEditableContent] = useState('');
     const [copied, setCopied] = useState(false);
     const [history, setHistory] = useState([]);
     const [showHistory, setShowHistory] = useState(false);
-    const [isSavingCloud, setIsSavingCloud] = useState(false);
-    const [cloudUrl, setCloudUrl] = useState(null);
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const [isDocsOpen, setIsDocsOpen] = useState(false);
+    const [fontFamily, setFontFamily] = useState("'Inter', sans-serif");
+
+    // Listen for font changes from RichEditor
+    useEffect(() => {
+        const handler = (e) => setFontFamily(e.detail);
+        document.addEventListener('editor-font-change', handler);
+        return () => document.removeEventListener('editor-font-change', handler);
+    }, []);
 
     const resultRef = useRef(null);
 
@@ -50,6 +60,13 @@ const SequenceGenerator = ({ isSidebarOpen, setIsSidebarOpen }) => {
         }
         loadIndexedDocs();
     }, []);
+
+    // Auto-dismiss notifications
+    useEffect(() => {
+        if (!notification) return;
+        const timer = setTimeout(() => setNotification(null), notification.autoDismiss || 6000);
+        return () => clearTimeout(timer);
+    }, [notification]);
 
     const loadIndexedDocs = async () => {
         const docs = await ragService.fetchUniqueDocuments();
@@ -78,8 +95,12 @@ const SequenceGenerator = ({ isSidebarOpen, setIsSidebarOpen }) => {
         setCopied(false);
 
         try {
-            const response = await antigravityService.generateSequence(formData);
-            const newResult = response.content;
+            const data = await antigravityService.generateSequence({
+                ...formData,
+                selectedDocs,
+                selectedCategories
+            });
+            const newResult = data.content;
             setResult(newResult);
             setEditableContent(newResult);
             setIsEditing(false);
@@ -94,6 +115,21 @@ const SequenceGenerator = ({ isSidebarOpen, setIsSidebarOpen }) => {
             setHistory(prev => [historyItem, ...prev].slice(0, 5));
         } catch (error) {
             console.error("Error generating sequence:", error);
+            if (error.type === 'HIGH_DEMAND') {
+                setNotification({
+                    type: 'warning',
+                    message: '⚡ Alta Demanda en el Modelo de IA',
+                    detail: error.detail || 'El servicio está recibiendo muchas solicitudes. Esperá unos segundos e intentá de nuevo.',
+                    autoDismiss: 10000
+                });
+            } else {
+                setNotification({
+                    type: 'error',
+                    message: '⚠️ Error al generar',
+                    detail: error.message || 'Ocurrió un error inesperado.',
+                    autoDismiss: 6000
+                });
+            }
         } finally {
             setIsGenerating(false);
         }
@@ -232,52 +268,26 @@ const SequenceGenerator = ({ isSidebarOpen, setIsSidebarOpen }) => {
         setIsEditing(!isEditing);
     };
 
-    const handleSaveToCloud = async () => {
-        if (!result) return;
+    const insertFormat = (symbol, placeholder = "texto") => {
+        const textarea = document.getElementById('editor-textarea');
+        if (!textarea) return;
 
-        // Solicitar token opcional para Gists privados
-        const token = localStorage.getItem('github_token') || prompt("Introduce tu GitHub Personal Access Token para guardar como Gist privado (cancela para público):");
-        if (token) localStorage.setItem('github_token', token);
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const text = editableContent;
+        const selectedText = text.substring(start, end) || placeholder;
+        const before = text.substring(0, start);
+        const after = text.substring(end);
 
-        setIsSavingCloud(true);
-        try {
-            const cloudResult = await cloudService.saveToCloud({
-                title: formData.topic || 'Secuencia Didáctica',
-                content: result,
-                metadata: {
-                    subject: formData.subject,
-                    year: formData.year
-                }
-            }, token);
+        const newText = `${before}${symbol}${selectedText}${symbol}${after}`;
+        setEditableContent(newText);
+        if (!isEditing) setResult(newText);
 
-            setCloudUrl(cloudResult.url);
-            alert("Guardado en la nube exitosamente.");
-            window.open(cloudResult.url, '_blank');
-        } catch (error) {
-            console.error("Cloud Save Error:", error);
-            alert("Error al guardar en la nube. Verifica tu conexión o el token.");
-        } finally {
-            setIsSavingCloud(false);
-        }
-    };
-
-    const handleSaveToDrive = async () => {
-        if (!result) return;
-        setIsSavingCloud(true);
-        try {
-            const token = await googleDriveService.getAccessToken();
-            await googleDriveService.saveFile(formData.topic || 'Secuencia Didáctica', result, token);
-            alert("¡Guardado en Google Drive exitosamente!");
-        } catch (error) {
-            console.error("Google Drive Error:", error);
-            if (error.message?.includes("VITE_GOOGLE_CLIENT_ID")) {
-                alert("Configuración pendiente: Debes añadir VITE_GOOGLE_CLIENT_ID en el archivo .env.");
-            } else {
-                alert(`Error al guardar en Drive: ${error.message || "Verifica tu conexión"}`);
-            }
-        } finally {
-            setIsSavingCloud(false);
-        }
+        // Re-enfocar y ajustar cursor (opcional pero bueno para UX)
+        setTimeout(() => {
+            textarea.focus();
+            textarea.setSelectionRange(start + symbol.length, start + symbol.length + selectedText.length);
+        }, 10);
     };
 
     const insertLink = () => {
@@ -414,7 +424,7 @@ const SequenceGenerator = ({ isSidebarOpen, setIsSidebarOpen }) => {
                         <form onSubmit={handleGenerate} className="space-y-5">
                             <InputField label="Materia" icon={<BookType size={16} />} name="subject" value={formData.subject} onChange={handleInputChange} placeholder="Ej. Matemáticas" />
                             <InputField label="Año / Curso" icon={<Calendar size={16} />} name="year" value={formData.year} onChange={handleInputChange} placeholder="Ej. 3er Año" />
-                            <InputField label="Tema" icon={<Wand2 size={16} />} name="topic" value={formData.topic} onChange={handleInputChange} placeholder="Ej. Ecuaciones" />
+                            <InputField label="Tema" icon={<Sparkles size={16} />} name="topic" value={formData.topic} onChange={handleInputChange} placeholder="Ej. Ecuaciones" />
 
                             <div className="grid grid-cols-2 gap-3">
                                 <InputField label="Duración" icon={<Clock size={16} />} name="duration" value={formData.duration} onChange={handleInputChange} placeholder="2h" />
@@ -440,9 +450,84 @@ const SequenceGenerator = ({ isSidebarOpen, setIsSidebarOpen }) => {
                                 onChange={handleInputChange}
                                 options={[
                                     { value: 'None', label: 'IA Base' },
-                                    ...existingDocs.map(doc => ({ value: doc, label: doc }))
+                                    ...existingDocs
+                                        .filter(d => d.category === 'Plantilla')
+                                        .map(doc => ({ value: doc.name, label: doc.name }))
                                 ]}
                             />
+
+                            {/* Selección de Contexto de Conocimiento */}
+                            <div className="space-y-3">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center">
+                                    <Database size={12} className="mr-1" /> Conocimiento a Usar
+                                </label>
+                                <div className="space-y-2 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                    {['Información', 'Plantilla'].map(cat => (
+                                        <label key={cat} className="flex items-center space-x-2 cursor-pointer group">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedCategories.includes(cat)}
+                                                onChange={(e) => {
+                                                    if (e.target.checked) setSelectedCategories(prev => [...prev, cat]);
+                                                    else setSelectedCategories(prev => prev.filter(c => c !== cat));
+                                                }}
+                                                className="rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                                            />
+                                            <span className="text-[10px] font-bold text-slate-600 uppercase group-hover:text-brand-600 transition-colors">
+                                                {cat === 'Plantilla' ? 'Estructuras' : 'Contenido/Actividades'}
+                                            </span>
+                                        </label>
+                                    ))}
+
+                                    {existingDocs.length > 0 && (
+                                        <div className="pt-2 border-t border-slate-200 mt-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => setIsDocsOpen(!isDocsOpen)}
+                                                className="w-full flex items-center justify-between text-[9px] font-black text-slate-400 uppercase hover:text-brand-600 transition-colors"
+                                            >
+                                                <span>Documentos Específicos</span>
+                                                <ChevronRight size={12} className={`transition-transform ${isDocsOpen ? 'rotate-90' : ''}`} />
+                                            </button>
+
+                                            {isDocsOpen && (
+                                                <div className="max-h-32 overflow-y-auto space-y-1 pr-1 custom-scrollbar mt-2 animate-fade-in">
+                                                    {existingDocs.map(doc => (
+                                                        <label key={doc.name} className="flex items-center space-x-2 cursor-pointer group">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={selectedDocs.includes(doc.name)}
+                                                                onChange={(e) => {
+                                                                    if (e.target.checked) setSelectedDocs(prev => [...prev, doc.name]);
+                                                                    else setSelectedDocs(prev => prev.filter(d => d !== doc.name));
+                                                                }}
+                                                                className="rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                                                            />
+                                                            <span className="text-[9px] font-medium text-slate-500 truncate group-hover:text-slate-800 transition-colors">
+                                                                {doc.name}
+                                                            </span>
+                                                        </label>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Chat de Sugerencias */}
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center">
+                                    <MessageSquare size={12} className="mr-1" /> Sugerencias Extras
+                                </label>
+                                <textarea
+                                    name="suggestions"
+                                    value={formData.suggestions}
+                                    onChange={handleInputChange}
+                                    className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-[11px] font-medium text-slate-700 focus:ring-4 focus:ring-brand-500/5 focus:border-brand-500 transition-all resize-none h-24"
+                                    placeholder="Ej. 'Añade más énfasis en la parte de resolución de problemas' o 'Usa un tono más lúdico'."
+                                />
+                            </div>
 
                             <button
                                 onClick={() => setFormData(prev => ({ ...prev, includeMedia: !prev.includeMedia }))}
@@ -504,29 +589,49 @@ const SequenceGenerator = ({ isSidebarOpen, setIsSidebarOpen }) => {
 
             {/* Área de Trabajo - Documento Espacial */}
             <main className="flex-grow flex flex-col relative bg-slate-200/50 overflow-hidden">
+
+                {/* ——— Toast Notification ——— */}
+                {notification && (
+                    <div className={`
+                        absolute top-4 left-1/2 -translate-x-1/2 z-50 flex items-start gap-3
+                        bg-white shadow-2xl border-l-4 rounded-2xl px-5 py-4 max-w-sm w-[calc(100%-2rem)]
+                        animate-fade-in-up
+                        ${notification.type === 'warning' ? 'border-amber-400' : 'border-red-500'}
+                    `}>
+                        <div className="text-xl mt-0.5 flex-shrink-0">
+                            {notification.type === 'warning' ? '⚡' : '⚠️'}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className={`text-xs font-black uppercase tracking-widest mb-1 ${notification.type === 'warning' ? 'text-amber-600' : 'text-red-600'}`}>
+                                {notification.message}
+                            </p>
+                            <p className="text-xs text-slate-500 leading-relaxed">
+                                {notification.detail}
+                            </p>
+                        </div>
+                        <button
+                            onClick={() => setNotification(null)}
+                            className="flex-shrink-0 text-slate-300 hover:text-slate-600 transition-colors mt-0.5 text-lg leading-none"
+                            aria-label="Cerrar"
+                        >
+                            ×
+                        </button>
+                    </div>
+                )}
+
                 {/* Floating Toolbar - Solo cuando hay resultado */}
                 {result && !isGenerating && (
-                    <div className="absolute top-6 left-1/2 -translate-x-1/2 z-10 flex items-center bg-white/90 backdrop-blur-xl p-1.5 rounded-2xl shadow-2xl shadow-slate-900/10 border border-white animate-fade-in-up">
-                        <div className="flex items-center space-x-1 px-1">
-                            <ToolbarButton onClick={handleCopy} icon={copied ? <Check size={16} className="text-green-500" /> : <Copy size={16} />} label={copied ? "Copiado" : "Copiar"} />
-                            <ToolbarButton onClick={toggleEdit} icon={isEditing ? <Check size={16} className="text-green-500" /> : <Edit3 size={16} />} label={isEditing ? "Ver" : "Editar"} highlighted={isEditing} />
-                            <div className="w-px h-6 bg-slate-200 mx-1" />
-
-                            <ToolbarButton onClick={handleSaveToDrive} icon={isSavingCloud ? <Loader2 size={16} className="animate-spin text-brand-600" /> : <HardDrive size={16} />} label="Drive" color="text-amber-600" />
-                            <ToolbarButton onClick={handleSaveToCloud} icon={isSavingCloud ? <Loader2 size={16} className="animate-spin text-brand-600" /> : <Cloud size={16} />} label="Gist" color="text-brand-600" />
-
-                            <div className="w-px h-6 bg-slate-200 mx-1" />
-                            <label className="cursor-pointer">
-                                <input type="file" className="hidden" accept="image/*" onChange={handleLocalImage} />
-                                <ToolbarButton as="div" icon={<Share2 size={16} />} label="+ Foto" />
-                            </label>
-                            <ToolbarButton onClick={insertImage} icon={<Wand2 size={16} />} label="URL Foto" />
-                            <ToolbarButton onClick={insertLink} icon={<Link size={16} />} label="Link" />
-
-                            <div className="w-px h-6 bg-slate-200 mx-1" />
-                            <ToolbarButton onClick={downloadWord} icon={<FileOutput size={16} />} label="Word" />
-                            <ToolbarButton onClick={downloadPDF} icon={<FileDown size={16} />} label="PDF" highlighted />
-                        </div>
+                    <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1 bg-white/90 backdrop-blur-xl px-3 py-2 rounded-full shadow-2xl shadow-slate-900/10 border border-white/80 animate-fade-in-up whitespace-nowrap">
+                        <ToolbarButton onClick={handleCopy} icon={copied ? <Check size={15} className="text-green-500" /> : <Copy size={15} />} label={copied ? "Copiado" : "Copiar"} />
+                        <ToolbarButton
+                            onClick={toggleEdit}
+                            icon={isEditing ? <Eye size={15} /> : <Edit3 size={15} />}
+                            label={isEditing ? "Ver Doc" : "Editar"}
+                            highlighted={isEditing}
+                        />
+                        <div className="w-px h-5 bg-slate-200 mx-1" />
+                        <ToolbarButton onClick={downloadWord} icon={<FileOutput size={15} />} label="Word" />
+                        <ToolbarButton onClick={downloadPDF} icon={<FileDown size={15} />} label="PDF" highlighted />
                     </div>
                 )}
 
@@ -546,26 +651,19 @@ const SequenceGenerator = ({ isSidebarOpen, setIsSidebarOpen }) => {
                             </div>
                         </div>
                     ) : result ? (
-                        <div className="w-full max-w-screen-md animate-scale-up origin-top relative pb-20">
+                        <div className="w-full max-w-screen-lg animate-scale-up origin-top relative pb-20">
                             {isEditing ? (
-                                <div className="flex flex-col space-y-4">
-                                    <div className="flex items-center justify-between px-4 py-2 bg-brand-50 rounded-xl border border-brand-100">
-                                        <span className="text-[10px] font-black text-brand-700 uppercase tracking-widest">Modo Edición Markdown</span>
-                                        <button onClick={toggleEdit} className="text-[10px] font-black text-brand-700 uppercase hover:underline">Finalizar</button>
-                                    </div>
-                                    <textarea
-                                        value={editableContent}
-                                        onChange={(e) => setEditableContent(e.target.value)}
-                                        className="w-full min-h-[1056px] bg-white text-slate-800 p-12 md:p-20 shadow-2xl border-2 border-brand-200 focus:ring-8 focus:ring-brand-500/5 focus:outline-none font-sans text-base leading-relaxed rounded-xl transition-all"
-                                        placeholder="Edita tu contenido aquí usando Markdown..."
-                                    />
-                                </div>
+                                <RichEditor
+                                    value={editableContent}
+                                    onChange={(v) => { setEditableContent(v); }}
+                                    fontFamily={fontFamily}
+                                />
                             ) : (
                                 <div
                                     ref={resultRef}
                                     id="pdf-content"
                                     className="bg-white px-10 md:px-20 py-16 shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-slate-100 min-h-[1056px] relative overflow-visible"
-                                    style={{ fontFamily: "'Inter', sans-serif" }}
+                                    style={{ fontFamily: fontFamily }}
                                 >
                                     {/* Membrete Minimalista Profesional (Sin marca de agua) */}
                                     <div className="flex justify-between items-start border-b-2 border-slate-900 pb-6 mb-10">
@@ -607,7 +705,7 @@ const SequenceGenerator = ({ isSidebarOpen, setIsSidebarOpen }) => {
                 </div>
             </main>
             <style>{`
-                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Roboto+Mono:wght@400;700&family=Montserrat:wght@400;700;900&display=swap');
                 
                 .custom-scrollbar::-webkit-scrollbar { width: 4px; }
                 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }

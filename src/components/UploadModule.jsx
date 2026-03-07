@@ -11,6 +11,7 @@ const UploadModule = () => {
     const [existingDocs, setExistingDocs] = useState([]);
     const [isLoadingStats, setIsLoadingStats] = useState(true);
     const [toast, setToast] = useState(null);
+    const [selectedCategory, setSelectedCategory] = useState('Información');
 
     // Cargar estadísticas iniciales
     const loadStats = async () => {
@@ -64,6 +65,7 @@ const UploadModule = () => {
             await ragService.processAndStoreDocument(
                 fileObj.file.name,
                 extractedText,
+                fileObj.category || 'Información',
                 (percent, message) => {
                     const totalPercent = 20 + (percent * 0.8);
                     updateFileStatus(fileObj.id, 'indexing', `Procesando: ${message}`, totalPercent);
@@ -110,7 +112,8 @@ const UploadModule = () => {
             id: Math.random().toString(36).substring(7),
             status: 'uploading',
             statusMessage: 'Iniciando...',
-            progress: 0
+            progress: 0,
+            category: selectedCategory
         }));
 
         setFiles(prev => [...prev, ...uploadingFiles]);
@@ -127,6 +130,18 @@ const UploadModule = () => {
         } catch (err) {
             console.error(err);
             showToast(`Fallo al eliminar`, 'error');
+        }
+    };
+
+    const handleToggleCategory = async (doc) => {
+        const newCategory = doc.category === 'Plantilla' ? 'Información' : 'Plantilla';
+        try {
+            await ragService.updateDocumentCategory(doc.name, newCategory);
+            showToast(`"${doc.name}" ahora es ${newCategory === 'Plantilla' ? 'una Plantilla' : 'Información'}`, 'success');
+            loadStats();
+        } catch (err) {
+            console.error(err);
+            showToast(`Fallo al cambiar categoría`, 'error');
         }
     };
 
@@ -215,6 +230,27 @@ const UploadModule = () => {
                         </form>
                     </div>
 
+                    {/* Category Selector */}
+                    <div className="flex flex-col space-y-3 px-1">
+                        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Categoría de los nuevos archivos</h3>
+                        <div className="grid grid-cols-2 gap-3">
+                            <button
+                                onClick={() => setSelectedCategory('Información')}
+                                className={`flex items-center justify-center space-x-3 p-4 rounded-2xl border-2 transition-all ${selectedCategory === 'Información' ? 'border-brand-500 bg-brand-50 text-brand-700 shadow-lg shadow-brand-500/10' : 'border-slate-100 bg-slate-50 text-slate-400 hover:border-slate-200'}`}
+                            >
+                                <Database size={18} />
+                                <span className="text-xs font-black uppercase tracking-tight">Información / Actividades</span>
+                            </button>
+                            <button
+                                onClick={() => setSelectedCategory('Plantilla')}
+                                className={`flex items-center justify-center space-x-3 p-4 rounded-2xl border-2 transition-all ${selectedCategory === 'Plantilla' ? 'border-brand-500 bg-brand-50 text-brand-700 shadow-lg shadow-brand-500/10' : 'border-slate-100 bg-slate-50 text-slate-400 hover:border-slate-200'}`}
+                            >
+                                <Layers size={18} />
+                                <span className="text-xs font-black uppercase tracking-tight">Estructura / Plantilla</span>
+                            </button>
+                        </div>
+                    </div>
+
                     {/* Progress & File Management */}
                     {(files.length > 0 || existingDocs.length > 0) && (
                         <div className="space-y-6">
@@ -260,29 +296,48 @@ const UploadModule = () => {
                                     </div>
                                 ))}
 
-                                {/* Indexed Docs */}
-                                {existingDocs.map((docName, idx) => (
-                                    <div key={idx} className="group flex items-center justify-between p-4 rounded-3xl bg-white/40 border border-slate-100 hover:bg-white hover:border-brand-200 hover:shadow-xl hover:shadow-slate-200/50 transition-all duration-500">
-                                        <div className="flex items-center space-x-4 overflow-hidden">
-                                            <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl group-hover:bg-emerald-600 group-hover:text-white transition-all shadow-sm">
-                                                <CheckCircle size={20} />
-                                            </div>
-                                            <div className="overflow-hidden">
-                                                <p className="text-sm font-black text-slate-700 truncate leading-none mb-1.5">{docName}</p>
-                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center">
-                                                    <ShieldCheck size={10} className="mr-1" /> Conocimiento Sincronizado
-                                                </p>
-                                            </div>
+                                {/* Indexed Docs grouped by category */}
+                                {['Plantilla', 'Información'].map(cat => {
+                                    const catDocs = existingDocs.filter(d => d.category === cat);
+                                    if (catDocs.length === 0) return null;
+
+                                    return (
+                                        <div key={cat} className="space-y-3 mt-4">
+                                            <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 px-2">{cat === 'Plantilla' ? 'Estructuras / Esqueletos' : 'Conocimiento General'}</p>
+                                            {catDocs.map((doc, idx) => (
+                                                <div key={idx} className="group flex items-center justify-between p-4 rounded-3xl bg-white/40 border border-slate-100 hover:bg-white hover:border-brand-200 hover:shadow-xl hover:shadow-slate-200/50 transition-all duration-500">
+                                                    <div className="flex items-center space-x-4 overflow-hidden">
+                                                        <div className={`p-3 rounded-2xl group-hover:text-white transition-all shadow-sm ${cat === 'Plantilla' ? 'bg-amber-50 text-amber-600 group-hover:bg-amber-600' : 'bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600'}`}>
+                                                            {cat === 'Plantilla' ? <Layers size={20} /> : <CheckCircle size={20} />}
+                                                        </div>
+                                                        <div className="overflow-hidden">
+                                                            <p className="text-sm font-black text-slate-700 truncate leading-none mb-1.5">{doc.name}</p>
+                                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center">
+                                                                <ShieldCheck size={10} className="mr-1" /> {cat === 'Plantilla' ? 'Plantilla Vinculada' : 'Información Sincronizada'}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center space-x-2">
+                                                        <button
+                                                            onClick={() => handleToggleCategory(doc)}
+                                                            className={`p-2 rounded-xl transition-all border ${cat === 'Plantilla' ? 'bg-amber-100 border-amber-200 text-amber-700 hover:bg-white' : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-brand-50 hover:text-brand-600'}`}
+                                                            title={cat === 'Plantilla' ? 'Convertir en Información' : 'Convertir en Plantilla'}
+                                                        >
+                                                            {cat === 'Plantilla' ? <Database size={16} /> : <Layers size={16} />}
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDeleteDocument(doc.name)}
+                                                            className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all opacity-0 group-hover:opacity-100"
+                                                            title="Desvincular conocimiento"
+                                                        >
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))}
                                         </div>
-                                        <button
-                                            onClick={() => handleDeleteDocument(docName)}
-                                            className="p-3 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all opacity-0 group-hover:opacity-100 transform translate-x-4 group-hover:translate-x-0"
-                                            title="Desvincular conocimiento"
-                                        >
-                                            <Trash2 size={18} />
-                                        </button>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         </div>
                     )}
