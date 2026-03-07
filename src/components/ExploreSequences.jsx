@@ -77,6 +77,24 @@ const ExploreSequences = ({ onLoadSequence }) => {
                                     </div>
                                 </div>
 
+                                <div className="flex items-center space-x-2 mb-4">
+                                    <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden border border-slate-200">
+                                        {seq.profiles?.avatar_url ? (
+                                            <img src={seq.profiles.avatar_url} alt={seq.profiles.full_name} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <span className="text-[10px] font-black text-slate-400 capitalize">
+                                                {seq.profiles?.full_name?.substring(0, 1) || '?'}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-xs font-bold text-slate-800 truncate">
+                                            {seq.profiles?.full_name || 'Docente Anónimo'}
+                                        </p>
+                                        <p className="text-[10px] text-slate-400 font-medium tracking-tight">Autor de la secuencia</p>
+                                    </div>
+                                </div>
+
                                 <h3 className="text-lg font-black text-slate-800 leading-tight mb-2 group-hover:text-emerald-600 transition-colors line-clamp-2">
                                     {seq.topic || 'Tema sin título'}
                                 </h3>

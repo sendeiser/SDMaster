@@ -58,22 +58,19 @@ export const sequenceDbService = {
     },
 
     /**
-     * Obtiene secuencias públicas de la comunidad (exceptuando las propias)
+     * Obtiene secuencias públicas de la comunidad incluyendo el nombre del creador
      */
     async getPublicSequences() {
         try {
-            const { data: { user } } = await supabase.auth.getUser();
-
-            let query = supabase
+            const { data, error } = await supabase
                 .from('saved_sequences')
                 .select(`
                     id, subject, topic, year, created_at, content, theme,
-                    user_id
+                    user_id,
+                    profiles:user_id (full_name, avatar_url)
                 `)
                 .eq('is_public', true)
                 .order('created_at', { ascending: false });
-
-            const { data, error } = await query;
 
             if (error) throw error;
             return data;
@@ -81,6 +78,59 @@ export const sequenceDbService = {
             console.error('Error obteniendo secuencias públicas:', error);
             throw error;
         }
+    },
+
+    /**
+     * Perfil de Usuario
+     */
+    async getProfile() {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return null;
+
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', user.id)
+                .single();
+
+            if (error && error.code !== 'PGRST116') throw error;
+            return data;
+        } catch (error) {
+            console.error('Error obteniendo perfil:', error);
+            return null;
+        }
+    },
+
+    async updateProfile(profileData) {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error('No hay sesión activa');
+
+            const { data, error } = await supabase
+                .from('profiles')
+                .upsert({
+                    id: user.id,
+                    ...profileData,
+                    updated_at: new Date().toISOString()
+                })
+                .select()
+                .single();
+
+            if (error) throw error;
+            return data;
+        } catch (error) {
+            console.error('Error actualizando perfil:', error);
+            throw error;
+        }
+    },
+
+    async updatePassword(newPassword) {
+        const { data, error } = await supabase.auth.updateUser({
+            password: newPassword
+        });
+        if (error) throw error;
+        return data;
     },
 
     /**

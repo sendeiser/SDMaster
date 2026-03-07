@@ -6,6 +6,7 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
     const [isLogin, setIsLogin] = useState(true);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [fullName, setFullName] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
@@ -28,6 +29,11 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
                 const { data, error } = await supabase.auth.signUp({
                     email,
                     password,
+                    options: {
+                        data: {
+                            full_name: fullName
+                        }
+                    }
                 });
                 if (error) throw error;
                 // Auto login on successful signup if email confirmation is off, else show message
@@ -75,6 +81,25 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
                     )}
 
                     <form onSubmit={handleSubmit} className="space-y-4">
+                        {!isLogin && (
+                            <div className="space-y-1.5 animate-slide-down">
+                                <label className="text-sm font-semibold text-slate-700">Nombre Completo</label>
+                                <div className="relative">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                                        <ArrowRight size={16} />
+                                    </div>
+                                    <input
+                                        type="text"
+                                        required
+                                        className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all font-medium text-slate-700"
+                                        placeholder="Prof. Juan Pérez"
+                                        value={fullName}
+                                        onChange={(e) => setFullName(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                        )}
+
                         <div className="space-y-1.5">
                             <label className="text-sm font-semibold text-slate-700">Email</label>
                             <div className="relative">

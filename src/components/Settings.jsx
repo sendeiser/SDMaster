@@ -1,165 +1,341 @@
 import React, { useState, useEffect } from 'react';
-import { User, Settings as SettingsIcon, Save, Monitor, Clock, LogOut } from 'lucide-react';
+import {
+    User, Settings as SettingsIcon, Save, Monitor, Clock, LogOut,
+    BookOpen, GraduationCap, Camera, Lock, CheckCircle2, AlertCircle, Loader2
+} from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
+import { sequenceDbService } from '../lib/sequenceDbService';
 
 const Settings = ({ session }) => {
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [profile, setProfile] = useState({
+        full_name: '',
+        avatar_url: '',
+        subjects: [],
+        courses: []
+    });
     const [preferences, setPreferences] = useState({
         defaultDuration: '2h',
         defaultTheme: 'classic',
         defaultStructure: 'Tradicional'
     });
-    const [saved, setSaved] = useState(false);
+
+    const [passwordData, setPasswordData] = useState({
+        newPassword: '',
+        confirmPassword: ''
+    });
+
+    const [status, setStatus] = useState({ type: '', message: '' });
 
     useEffect(() => {
-        // Cargar preferencias
-        const stored = localStorage.getItem('sd_preferences');
-        if (stored) {
-            try {
-                setPreferences(JSON.parse(stored));
-            } catch (e) {
-                console.error("Error parsing preferences", e);
-            }
-        }
-    }, []);
+        loadUserData();
+    }, [session]);
 
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        setPreferences(prev => ({ ...prev, [name]: value }));
-        setSaved(false);
+    const loadUserData = async () => {
+        setLoading(true);
+        try {
+            // Cargar perfil de DB
+            const data = await sequenceDbService.getProfile();
+            if (data) {
+                setProfile({
+                    full_name: data.full_name || '',
+                    avatar_url: data.avatar_url || '',
+                    subjects: data.subjects || [],
+                    courses: data.courses || []
+                });
+            }
+
+            // Cargar preferencias de LocalStorage
+            const stored = localStorage.getItem('sd_preferences');
+            if (stored) {
+                setPreferences(JSON.parse(stored));
+            }
+        } catch (error) {
+            console.error("Error cargando datos:", error);
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const handleSave = () => {
-        localStorage.setItem('sd_preferences', JSON.stringify(preferences));
-        setSaved(true);
-        setTimeout(() => setSaved(false), 3000);
+    const handleProfileChange = (e) => {
+        const { name, value } = e.target;
+        setProfile(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handlePreferenceChange = (e) => {
+        const { name, value } = e.target;
+        setPreferences(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleArrayChange = (name, value) => {
+        // Convertir string separado por comas a array
+        const arr = value.split(',').map(item => item.trim()).filter(Boolean);
+        setProfile(prev => ({ ...prev, [name]: arr }));
+    };
+
+    const handleSaveAll = async () => {
+        setSaving(true);
+        try {
+            // Guardar Perfil en Supabase
+            await sequenceDbService.updateProfile(profile);
+
+            // Guardar Preferencias en LocalStorage
+            localStorage.setItem('sd_preferences', JSON.stringify(preferences));
+
+            setStatus({ type: 'success', message: '¡Configuración guardada correctamente!' });
+        } catch (error) {
+            setStatus({ type: 'error', message: 'Error al guardar: ' + error.message });
+        } finally {
+            setSaving(false);
+            setTimeout(() => setStatus({ type: '', message: '' }), 4000);
+        }
+    };
+
+    const handlePasswordUpdate = async (e) => {
+        e.preventDefault();
+        if (passwordData.newPassword !== passwordData.confirmPassword) {
+            setStatus({ type: 'error', message: 'Las contraseñas no coinciden' });
+            return;
+        }
+
+        setSaving(true);
+        try {
+            await sequenceDbService.updatePassword(passwordData.newPassword);
+            setStatus({ type: 'success', message: 'Contraseña actualizada con éxito' });
+            setPasswordData({ newPassword: '', confirmPassword: '' });
+        } catch (error) {
+            setStatus({ type: 'error', message: error.message });
+        } finally {
+            setSaving(false);
+            setTimeout(() => setStatus({ type: '', message: '' }), 4000);
+        }
     };
 
     const handleLogout = async () => {
         await supabase.auth.signOut();
     };
 
+    if (loading) {
+        return (
+            <div className="flex-grow flex items-center justify-center bg-slate-50">
+                <div className="flex flex-col items-center space-y-4">
+                    <Loader2 size={40} className="animate-spin text-brand-500" />
+                    <p className="text-sm font-black text-slate-400 uppercase tracking-widest">Sincronizando perfil...</p>
+                </div>
+            </div>
+        );
+    }
+
     return (
-        <div className="flex-grow bg-slate-100 flex items-center justify-center p-6 h-full overflow-y-auto">
-            <div className="max-w-3xl w-full bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden">
-                <div className="p-8 sm:p-12 border-b border-slate-100 flex items-start justify-between">
-                    <div>
-                        <h2 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight flex items-center gap-3">
-                            <SettingsIcon className="text-brand-500" size={32} />
-                            Configuración Avanzada
-                        </h2>
-                        <p className="text-slate-500 mt-2 font-medium">Personaliza tu experiencia de generación y gestiona tu cuenta PRO.</p>
+        <div className="flex-grow bg-slate-50 p-4 md:p-8 lg:p-12 overflow-y-auto custom-scrollbar flex justify-center">
+            <div className="max-w-5xl w-full space-y-8">
+
+                {/* Header Dinámico */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+                    <div className="flex items-center gap-6">
+                        <div className="relative group">
+                            <div className="w-20 h-20 rounded-2xl bg-brand-50 flex items-center justify-center overflow-hidden border-2 border-brand-100 shadow-inner">
+                                {profile.avatar_url ? (
+                                    <img src={profile.avatar_url} className="w-full h-full object-cover" alt="Perfil" />
+                                ) : (
+                                    <User size={32} className="text-brand-300" />
+                                )}
+                            </div>
+                            <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-white rounded-lg shadow-md border border-slate-100 flex items-center justify-center text-slate-400 group-hover:text-brand-500 transition-colors cursor-pointer">
+                                <Camera size={14} />
+                            </div>
+                        </div>
+                        <div>
+                            <h2 className="text-2xl font-black text-slate-900 tracking-tight">
+                                {profile.full_name || 'Configura tu nombre'}
+                            </h2>
+                            <p className="text-slate-500 font-medium">{session?.user?.email}</p>
+                        </div>
                     </div>
+                    <button
+                        onClick={handleSaveAll}
+                        disabled={saving}
+                        className="flex items-center justify-center gap-2 px-8 py-3 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-bold shadow-lg shadow-brand-500/20 transition-all disabled:opacity-50"
+                    >
+                        {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                        Guardar Cambios
+                    </button>
                 </div>
 
-                <div className="p-8 sm:p-12 grid grid-cols-1 md:grid-cols-2 gap-12">
+                {status.message && (
+                    <div className={`p-4 rounded-2xl flex items-center gap-3 animate-fade-in ${status.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
+                        {status.type === 'success' ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
+                        <p className="font-bold text-sm">{status.message}</p>
+                    </div>
+                )}
 
-                    {/* Preferencias */}
-                    <div className="space-y-6">
-                        <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 mb-6">
-                            <Monitor size={16} /> Preferencias del Generador
-                        </h3>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-                        <div className="space-y-5">
-                            <div>
-                                <label className="block text-sm font-bold text-slate-700 mb-2">Tema Visual por Defecto</label>
-                                <select
-                                    name="defaultTheme"
-                                    value={preferences.defaultTheme}
-                                    onChange={handleChange}
-                                    className="w-full text-slate-600 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500/20"
-                                >
-                                    <option value="classic">Clásico</option>
-                                    <option value="minimalist">Minimalista</option>
-                                    <option value="colorful">Dinámico</option>
-                                    <option value="academic">Académico</option>
-                                </select>
+                    {/* Columna Izquierda: Datos Personales y Académicos */}
+                    <div className="lg:col-span-2 space-y-8">
+
+                        {/* Mi Perfil */}
+                        <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-sm space-y-6">
+                            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                <User size={16} /> Información Personal
+                            </h3>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">Nombre Completo</label>
+                                    <input
+                                        type="text"
+                                        name="full_name"
+                                        value={profile.full_name}
+                                        onChange={handleProfileChange}
+                                        placeholder="Ej. Prof. Juan Pérez"
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/10 focus:border-brand-500 outline-none transition-all font-medium"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">URL de Foto de Perfil</label>
+                                    <input
+                                        type="text"
+                                        name="avatar_url"
+                                        value={profile.avatar_url}
+                                        onChange={handleProfileChange}
+                                        placeholder="https://tu-foto.jpg"
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/10 focus:border-brand-500 outline-none transition-all font-medium"
+                                    />
+                                </div>
                             </div>
+                        </div>
 
-                            <div>
-                                <label className="block text-sm font-bold text-slate-700 mb-2">Estructura por Defecto</label>
-                                <select
-                                    name="defaultStructure"
-                                    value={preferences.defaultStructure}
-                                    onChange={handleChange}
-                                    className="w-full text-slate-600 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500/20"
-                                >
-                                    <option value="Tradicional">Inicio/Cierre (Tradicional)</option>
-                                    <option value="ABP">Proyectos (ABP)</option>
-                                    <option value="Flipped">Aula Invertida</option>
-                                    <option value="Gamificación">Gamificación</option>
-                                    <option value="Kolb">Ciclo de Kolb</option>
-                                </select>
+                        {/* Preferencias Académicas */}
+                        <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-sm space-y-6">
+                            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                <GraduationCap size={16} /> Perfil Académico
+                            </h3>
+
+                            <div className="space-y-6">
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">Materias que Dictas (Separadas por comas)</label>
+                                    <textarea
+                                        rows="2"
+                                        placeholder="Matemática, Física, Robótica..."
+                                        value={profile.subjects.join(', ')}
+                                        onChange={(e) => handleArrayChange('subjects', e.target.value)}
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/10 focus:border-brand-500 outline-none transition-all font-medium resize-none"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">Cursos/Años (Separados por comas)</label>
+                                    <input
+                                        type="text"
+                                        placeholder="1° Año, 2° Año, 5° B"
+                                        value={profile.courses.join(', ')}
+                                        onChange={(e) => handleArrayChange('courses', e.target.value)}
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/10 focus:border-brand-500 outline-none transition-all font-medium"
+                                    />
+                                </div>
                             </div>
+                        </div>
 
-                            <div>
-                                <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
-                                    <Clock size={16} /> Duración Estimada
-                                </label>
-                                <input
-                                    type="text"
-                                    name="defaultDuration"
-                                    value={preferences.defaultDuration}
-                                    onChange={handleChange}
-                                    placeholder="Ej. 2h"
-                                    className="w-full text-slate-600 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500/20"
-                                />
-                            </div>
-
-                            <button
-                                onClick={handleSave}
-                                className={`w-full py-4 mt-6 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${saved ? 'bg-emerald-500 text-white' : 'bg-brand-600 hover:bg-brand-700 text-white shadow-lg shadow-brand-500/30'}`}
-                            >
-                                {saved ? <>¡Guardado correctamente!</> : <><Save size={18} /> Guardar Preferencias</>}
-                            </button>
+                        {/* Seguridad */}
+                        <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-sm">
+                            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 mb-6">
+                                <Lock size={16} /> Seguridad de la Cuenta
+                            </h3>
+                            <form onSubmit={handlePasswordUpdate} className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">Nueva Contraseña</label>
+                                    <input
+                                        type="password"
+                                        required
+                                        value={passwordData.newPassword}
+                                        onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/10 focus:border-brand-500 outline-none transition-all font-medium"
+                                        placeholder="Mínimo 6 chars"
+                                    />
+                                </div>
+                                <div className="flex gap-3">
+                                    <input
+                                        type="password"
+                                        required
+                                        value={passwordData.confirmPassword}
+                                        onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                                        className="flex-grow px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/10 focus:border-brand-500 outline-none transition-all font-medium"
+                                        placeholder="Repetir..."
+                                    />
+                                    <button
+                                        type="submit"
+                                        className="px-6 py-3 bg-slate-900 hover:bg-black text-white rounded-xl font-bold transition-all shadow-lg"
+                                    >
+                                        Cambiar
+                                    </button>
+                                </div>
+                            </form>
                         </div>
                     </div>
 
-                    {/* Cuenta */}
-                    <div className="space-y-6">
-                        <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 mb-6">
-                            <User size={16} /> Datos de la Cuenta
-                        </h3>
+                    {/* Columna Derecha: Preferencias Generador */}
+                    <div className="space-y-8">
+                        <div className="bg-white rounded-3xl p-8 border-2 border-brand-50 shadow-sm space-y-6 lg:sticky lg:top-8">
+                            <h3 className="text-xs font-black text-brand-600 uppercase tracking-widest flex items-center gap-2">
+                                <Monitor size={16} /> Defaults del Generador
+                            </h3>
 
-                        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6">
-                            {session ? (
-                                <div className="space-y-6">
-                                    <div>
-                                        <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-1">Email Registrado</p>
-                                        <p className="text-lg font-black text-slate-800">{session.user.email}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-1">Tipo de Plan</p>
-                                        <div className="inline-flex mt-1 items-center space-x-2 px-3 py-1.5 rounded-full bg-brand-100 border border-brand-200">
-                                            <span className="text-xs font-black text-brand-700 uppercase tracking-widest">Plan PRO</span>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-1">Último Ingreso</p>
-                                        <p className="text-sm font-medium text-slate-600">
-                                            {new Date(session.user.last_sign_in_at).toLocaleString()}
-                                        </p>
-                                    </div>
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Materia Predeterminada</label>
+                                    <select
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 focus:border-brand-500 outline-none"
+                                        name="defaultSubject"
+                                        value={preferences.defaultSubject || ''}
+                                        onChange={handlePreferenceChange}
+                                    >
+                                        <option value="">Selecciona...</option>
+                                        {profile.subjects.map(s => <option key={s} value={s}>{s}</option>)}
+                                    </select>
+                                </div>
 
-                                    <div className="pt-6 border-t border-slate-200 mt-6">
-                                        <button
-                                            onClick={handleLogout}
-                                            className="w-full flex items-center justify-center gap-2 py-3 bg-white border border-slate-200 text-slate-600 hover:text-red-600 hover:border-red-200 hover:bg-red-50 rounded-xl font-bold transition-colors"
-                                        >
-                                            <LogOut size={16} /> Cerrar Sesión Segura
-                                        </button>
-                                    </div>
+                                <div>
+                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Tema Visual</label>
+                                    <select
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 focus:border-brand-500 outline-none"
+                                        name="defaultTheme"
+                                        value={preferences.defaultTheme}
+                                        onChange={handlePreferenceChange}
+                                    >
+                                        <option value="classic">Clásico</option>
+                                        <option value="minimalist">Minimalista</option>
+                                        <option value="colorful">Dinámico</option>
+                                        <option value="academic">Académico</option>
+                                    </select>
                                 </div>
-                            ) : (
-                                <div className="text-center py-8">
-                                    <div className="w-16 h-16 bg-slate-200 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
-                                        <User size={32} />
-                                    </div>
-                                    <p className="text-slate-500 font-medium mb-4">No has iniciado sesión. Para acceder a funciones Pro, ingresa a tu cuenta.</p>
+
+                                <div>
+                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Estructura</label>
+                                    <select
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 focus:border-brand-500 outline-none"
+                                        name="defaultStructure"
+                                        value={preferences.defaultStructure}
+                                        onChange={handlePreferenceChange}
+                                    >
+                                        <option value="Tradicional">Tradicional</option>
+                                        <option value="ABP">Proyectos (ABP)</option>
+                                        <option value="Flipped">Aula Invertida</option>
+                                        <option value="Gamificación">Gamificación</option>
+                                    </select>
                                 </div>
-                            )}
+
+                                <div className="pt-6">
+                                    <button
+                                        onClick={handleLogout}
+                                        className="w-full flex items-center justify-center gap-2 py-3 border-2 border-slate-100 text-slate-400 hover:text-red-500 hover:border-red-100 hover:bg-red-50 rounded-xl font-bold transition-all text-xs uppercase tracking-widest"
+                                    >
+                                        <LogOut size={14} /> Salida Segura
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
-
                 </div>
             </div>
         </div>
