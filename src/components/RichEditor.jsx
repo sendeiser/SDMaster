@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css'; // Estilos base de Quill
+import ReactQuill from 'react-quill-new';
+import 'react-quill-new/dist/quill.snow.css'; // Estilos base de Quill
 import { Eye, Edit3, Columns, AlignLeft, AlignCenter, AlignRight, Type } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
