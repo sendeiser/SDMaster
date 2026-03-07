@@ -139,3 +139,78 @@ body {
 .animate-slide-up {
   animation: slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+/* --- Quill Premium Overrides --- */
+.quill-premium-wrapper .ql-toolbar.ql-snow {
+  border: none;
+  border-bottom: 1px solid #f1f5f9;
+  background-color: #ffffff;
+  padding: 12px 16px;
+  border-radius: 0;
+}
+
+.quill-premium-wrapper .ql-container.ql-snow {
+  border: none;
+  font-family: inherit;
+  font-size: 14px;
+  color: #1e293b;
+}
+
+.quill-premium-wrapper .ql-editor {
+  padding: 24px;
+  min-height: 500px;
+  line-height: 1.8;
+}
+
+.quill-premium-wrapper .ql-editor.ql-blank::before {
+  color: #cbd5e1;
+  font-style: normal;
+}
+
+.quill-premium-wrapper .ql-editor p {
+  margin-bottom: 0.75rem;
+}
+
+.quill-premium-wrapper .ql-editor h1, 
+.quill-premium-wrapper .ql-editor h2, 
+.quill-premium-wrapper .ql-editor h3 {
+  color: #0f172a;
+  font-weight: 800;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  letter-spacing: -0.025em;
+}
+
+.quill-premium-wrapper .ql-editor h1 { font-size: 1.5rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.5rem; }
+.quill-premium-wrapper .ql-editor h2 { font-size: 1.25rem; }
+.quill-premium-wrapper .ql-editor h3 { font-size: 1rem; }
+
+.quill-premium-wrapper .ql-snow .ql-picker {
+  color: #64748b;
+  font-weight: 600;
+}
+
+.quill-premium-wrapper .ql-snow .ql-stroke {
+  stroke: #64748b;
+}
+
+.quill-premium-wrapper .ql-snow .ql-fill, 
+.quill-premium-wrapper .ql-snow .ql-stroke.ql-fill {
+  fill: #64748b;
+}
+
+.quill-premium-wrapper .ql-snow.ql-toolbar button:hover .ql-stroke { stroke: #0ea5e9; }
+.quill-premium-wrapper .ql-snow.ql-toolbar button:hover .ql-fill { fill: #0ea5e9; }
+.quill-premium-wrapper .ql-snow.ql-toolbar button.ql-active .ql-stroke { stroke: #0ea5e9; }
+.quill-premium-wrapper .ql-snow.ql-toolbar button.ql-active .ql-fill { fill: #0ea5e9; }
+
+.quill-premium-wrapper .ql-editor blockquote {
+  border-left: 4px solid #38bdf8;
+  padding-left: 1rem;
+  margin: 1rem 0;
+  background-color: #f0f9ff;
+  border-top-right-radius: 0.5rem;
+  border-bottom-right-radius: 0.5rem;
+  color: #0369a1;
+  font-style: italic;
+}

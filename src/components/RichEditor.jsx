@@ -1,15 +1,13 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css'; // Estilos base de Quill
+import { Eye, Edit3, Columns, AlignLeft, AlignCenter, AlignRight, Type } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
-import {
-    Bold, Italic, Strikethrough, Code, Link, Image, List, ListOrdered,
-    Quote, Minus, Table, Eye, Edit3, Columns, Heading1, Heading2, Heading3,
-    Undo, Redo, AlignLeft, AlignCenter, AlignRight, Type
-} from 'lucide-react';
 
-// ————— Markdown Components (rich styled) —————
+// ————— Markdown Components (for fallback or initial render parsing if needed) —————
 const mdComponents = {
     h1: ({ children }) => <h1 className="text-2xl font-black text-slate-900 mt-8 mb-3 pb-2 border-b border-slate-200 tracking-tight">{children}</h1>,
     h2: ({ children }) => <h2 className="text-xl font-bold text-slate-800 mt-6 mb-2 tracking-tight">{children}</h2>,
@@ -39,287 +37,108 @@ const mdComponents = {
     hr: () => <hr className="my-6 border-slate-200" />,
 };
 
-// ————— Toolbar Button —————
-const TBtn = ({ onClick, icon, label, active, disabled }) => (
-    <button
-        type="button"
-        onClick={onClick}
-        disabled={disabled}
-        title={label}
-        className={`
-            flex items-center justify-center w-7 h-7 rounded text-slate-500 transition-all
-            hover:bg-slate-100 hover:text-slate-900 active:scale-90
-            ${active ? 'bg-brand-100 text-brand-700' : ''}
-            ${disabled ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}
-        `}
-    >
-        {icon}
-    </button>
-);
-
-const Divider = () => <div className="w-px h-5 bg-slate-200 mx-0.5 flex-shrink-0" />;
-
-// ————— Insert helper —————
-const useInsert = (value, onChange, textareaRef) => {
-    return useCallback((before, after = '', placeholder = '') => {
-        const el = textareaRef.current;
-        if (!el) return;
-        const start = el.selectionStart;
-        const end = el.selectionEnd;
-        const selected = value.substring(start, end) || placeholder;
-        const newVal = value.substring(0, start) + before + selected + after + value.substring(end);
-        onChange(newVal);
-        setTimeout(() => {
-            el.focus();
-            const cursor = start + before.length;
-            el.setSelectionRange(cursor, cursor + selected.length);
-        }, 10);
-    }, [value, onChange, textareaRef]);
+// Configuramos los módulos de Quill (Herramientas disponibles)
+const modules = {
+    toolbar: [
+        [{ 'header': [1, 2, 3, false] }],
+        ['bold', 'italic', 'underline', 'strike'],        // toggled buttons
+        ['blockquote', 'code-block'],
+        [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+        [{ 'script': 'sub' }, { 'script': 'super' }],      // superscript/subscript
+        [{ 'indent': '-1' }, { 'indent': '+1' }],          // outdent/indent
+        [{ 'color': [] }, { 'background': [] }],          // dropdown with defaults from theme
+        [{ 'align': [] }],
+        ['link', 'image', 'video'],
+        ['clean']                                         // remove formatting button
+    ],
+    history: {
+        delay: 1000,
+        maxStack: 50,
+        userOnly: true
+    }
 };
 
-// ————— Main RichEditor Component —————
-const RichEditor = ({ value, onChange, fontFamily = "'Inter', sans-serif", mdPreviewComponents }) => {
-    const [activeTab, setActiveTab] = useState('write'); // 'write' | 'preview' | 'split'
-    const [history, setHistory] = useState([value]);
-    const [histIdx, setHistIdx] = useState(0);
-    const textareaRef = useRef(null);
+const formats = [
+    'header',
+    'bold', 'italic', 'underline', 'strike',
+    'blockquote', 'code-block',
+    'list', 'bullet',
+    'script',
+    'indent',
+    'color', 'background',
+    'align',
+    'link', 'image', 'video'
+];
 
-    // Push history on meaningful change (debounced)
-    const historyTimer = useRef(null);
-    const pushHistory = useCallback((v) => {
-        clearTimeout(historyTimer.current);
-        historyTimer.current = setTimeout(() => {
-            setHistory(prev => {
-                const trimmed = prev.slice(0, histIdx + 1);
-                return [...trimmed, v].slice(-50); // max 50 snapshots
-            });
-            setHistIdx(prev => Math.min(prev + 1, 49));
-        }, 600);
-    }, [histIdx]);
+const RichEditor = ({ value, onChange, fontFamily = "'Inter', sans-serif" }) => {
+    // Si la entrada es un markdown inicial, habría que convertirlo a HTML usando marked o un render() on mount.
+    // Para simplificar y dado que el nuevo editor maneja HTML nativo como foros/word:
+    // Asumiremos que el valor de entrada se trata como text/html. Si SequenceGenerator le pasa markdown puro,
+    // se verá como texto plano la primera vez, pero el usuario puede formatear visualmente y onChange devolverá HTLM limpio.
 
-    const handleChange = (newVal) => {
-        onChange(newVal);
-        pushHistory(newVal);
+    // Convertir de MD a HTML en montaje inicial si es necesario, 
+    // pero idealmente 'value' aquí va a ser HTML después de la primera edición.
+
+    const countWords = (htmlStr) => {
+        if (!htmlStr) return 0;
+        const text = htmlStr.replace(/<[^>]*>?/gm, ' ').trim();
+        return text ? text.split(/\s+/).length : 0;
     };
-
-    const undo = () => {
-        if (histIdx <= 0) return;
-        const newIdx = histIdx - 1;
-        setHistIdx(newIdx);
-        onChange(history[newIdx]);
-    };
-
-    const redo = () => {
-        if (histIdx >= history.length - 1) return;
-        const newIdx = histIdx + 1;
-        setHistIdx(newIdx);
-        onChange(history[newIdx]);
-    };
-
-    const insert = useInsert(value, handleChange, textareaRef);
-
-    // Keyboard shortcuts
-    useEffect(() => {
-        const el = textareaRef.current;
-        if (!el) return;
-        const handler = (e) => {
-            const ctrl = e.ctrlKey || e.metaKey;
-            if (!ctrl) return;
-            if (e.key === 'b') { e.preventDefault(); insert('**', '**', 'negrita'); }
-            if (e.key === 'i') { e.preventDefault(); insert('*', '*', 'cursiva'); }
-            if (e.key === 'k') { e.preventDefault(); insert('[', '](url)', 'texto'); }
-            if (e.key === 'z') { e.preventDefault(); undo(); }
-            if (e.key === 'y') { e.preventDefault(); redo(); }
-        };
-        el.addEventListener('keydown', handler);
-        return () => el.removeEventListener('keydown', handler);
-    }, [insert, undo, redo]);
-
-    // Tab key inserts spaces
-    const handleKeyDown = (e) => {
-        if (e.key === 'Tab') {
-            e.preventDefault();
-            insert('  ', '', '');
-        }
-    };
-
-    const components = mdPreviewComponents || mdComponents;
-
-    const tabBtn = (id, label, Icon) => (
-        <button
-            type="button"
-            onClick={() => setActiveTab(id)}
-            className={`
-                flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded-lg transition-all
-                ${activeTab === id
-                    ? 'bg-white text-slate-900 shadow-sm border border-slate-200'
-                    : 'text-slate-400 hover:text-slate-700'}
-            `}
-        >
-            <Icon size={13} />
-            {label}
-        </button>
-    );
 
     return (
-        <div className="flex flex-col border border-slate-200 rounded-2xl overflow-hidden shadow-lg bg-white">
+        <div className="flex flex-col border border-slate-200 rounded-2xl overflow-hidden shadow-lg bg-white relative">
 
-            {/* ——— Header Bar ——— */}
+            {/* Header / Opciones custom */}
             <div className="flex items-center justify-between px-3 py-2 bg-slate-50 border-b border-slate-200">
-                {/* Tabs */}
-                <div className="flex gap-1 p-0.5 bg-slate-100 rounded-xl">
-                    {tabBtn('write', 'Escribir', Edit3)}
-                    {tabBtn('preview', 'Vista previa', Eye)}
-                    {tabBtn('split', 'Dividir', Columns)}
+                <div className="flex items-center gap-2">
+                    <span className="flex items-center justify-center p-1.5 bg-brand-100 text-brand-600 rounded-lg">
+                        <Edit3 size={14} />
+                    </span>
+                    <span className="text-[10px] font-black text-slate-700 uppercase tracking-widest">
+                        Editor Visual Avanzado
+                    </span>
                 </div>
 
-                {/* Right: undo/redo */}
+                {/* Selector de fuente integrado */}
                 <div className="flex items-center gap-1">
-                    <TBtn onClick={undo} icon={<Undo size={13} />} label="Deshacer (Ctrl+Z)" disabled={histIdx <= 0} />
-                    <TBtn onClick={redo} icon={<Redo size={13} />} label="Rehacer (Ctrl+Y)" disabled={histIdx >= history.length - 1} />
+                    <Type size={12} className="text-slate-400" />
+                    <select
+                        title="Fuente del documento"
+                        defaultValue="'Inter', sans-serif"
+                        onChange={(e) => {
+                            const event = new CustomEvent('editor-font-change', { detail: e.target.value });
+                            document.dispatchEvent(event);
+                        }}
+                        className="text-[10px] font-bold text-slate-500 bg-transparent border border-slate-200 rounded-lg px-2 py-1 outline-none hover:border-slate-300 focus:ring-2 focus:ring-brand-500/20 cursor-pointer"
+                    >
+                        <option value="'Inter', sans-serif">Inter</option>
+                        <option value="'Playfair Display', serif">Elegante</option>
+                        <option value="'Roboto Mono', monospace">Monoespaciada</option>
+                        <option value="'Montserrat', sans-serif">Montserrat</option>
+                        <option value="'Georgia', serif">Georgia</option>
+                    </select>
                 </div>
             </div>
 
-            {/* ——— Toolbar ——— */}
-            {(activeTab === 'write' || activeTab === 'split') && (
-                <div className="flex flex-wrap items-center gap-0.5 px-3 py-2 bg-white border-b border-slate-100">
-                    {/* Headings */}
-                    <TBtn onClick={() => insert('\n# ', '', 'Título')} icon={<Heading1 size={14} />} label="Título H1" />
-                    <TBtn onClick={() => insert('\n## ', '', 'Subtítulo')} icon={<Heading2 size={14} />} label="Subtítulo H2" />
-                    <TBtn onClick={() => insert('\n### ', '', 'Sección')} icon={<Heading3 size={14} />} label="Sección H3" />
-                    <Divider />
-
-                    {/* Inline format */}
-                    <TBtn onClick={() => insert('**', '**', 'negrita')} icon={<Bold size={14} />} label="Negrita (Ctrl+B)" />
-                    <TBtn onClick={() => insert('*', '*', 'cursiva')} icon={<Italic size={14} />} label="Cursiva (Ctrl+I)" />
-                    <TBtn onClick={() => insert('~~', '~~', 'tachado')} icon={<Strikethrough size={14} />} label="Tachado" />
-                    <TBtn onClick={() => insert('`', '`', 'código')} icon={<Code size={14} />} label="Código inline" />
-                    <Divider />
-
-                    {/* Blocks */}
-                    <TBtn onClick={() => insert('\n> ', '', 'cita destacada')} icon={<Quote size={14} />} label="Cita" />
-                    <TBtn onClick={() => insert('\n- ', '', 'elemento')} icon={<List size={14} />} label="Lista" />
-                    <TBtn onClick={() => insert('\n1. ', '', 'elemento')} icon={<ListOrdered size={14} />} label="Lista numerada" />
-                    <TBtn onClick={() => insert('\n---\n', '', '')} icon={<Minus size={14} />} label="Separador" />
-                    <Divider />
-
-                    {/* Table */}
-                    <TBtn
-                        onClick={() => insert('\n| Columna 1 | Columna 2 | Columna 3 |\n|---|---|---|\n| ', ' | dato | dato |\n', 'dato')}
-                        icon={<Table size={14} />}
-                        label="Tabla"
-                    />
-                    <Divider />
-
-                    {/* Link & Image */}
-                    <TBtn
-                        onClick={() => {
-                            const url = prompt('URL del enlace:');
-                            if (url) insert('[', `](${url})`, 'texto del enlace');
-                        }}
-                        icon={<Link size={14} />}
-                        label="Enlace (Ctrl+K)"
-                    />
-                    <TBtn
-                        onClick={() => {
-                            const url = prompt('URL de la imagen:');
-                            if (url) {
-                                const alt = prompt('Descripción (alt):', 'imagen') || 'imagen';
-                                insert(`![${alt}](${url})\n`, '', '');
-                            }
-                        }}
-                        icon={<Image size={14} />}
-                        label="Imagen por URL"
-                    />
-
-                    {/* Font selector */}
-                    <Divider />
-                    <div className="flex items-center gap-1">
-                        <Type size={12} className="text-slate-400" />
-                        <select
-                            title="Fuente del documento"
-                            defaultValue="'Inter', sans-serif"
-                            onChange={(e) => {
-                                // Propagate font up via custom event or prop
-                                const event = new CustomEvent('editor-font-change', { detail: e.target.value });
-                                document.dispatchEvent(event);
-                            }}
-                            className="text-[10px] font-bold text-slate-500 bg-transparent border border-slate-200 rounded-lg px-2 py-1 outline-none hover:border-slate-300 focus:ring-2 focus:ring-brand-500/20 cursor-pointer"
-                        >
-                            <option value="'Inter', sans-serif">Inter</option>
-                            <option value="'Playfair Display', serif">Elegante</option>
-                            <option value="'Roboto Mono', monospace">Monoespaciada</option>
-                            <option value="'Montserrat', sans-serif">Montserrat</option>
-                            <option value="'Georgia', serif">Georgia</option>
-                        </select>
-                    </div>
-                </div>
-            )}
-
-            {/* ——— Editor / Preview Area ——— */}
-            <div className={`flex flex-1 ${activeTab === 'split' ? 'divide-x divide-slate-100' : ''}`}
-                style={{ minHeight: '520px' }}
-            >
-                {/* Write pane */}
-                {(activeTab === 'write' || activeTab === 'split') && (
-                    <div className={`flex flex-col ${activeTab === 'split' ? 'w-1/2' : 'w-full'} bg-white`}>
-                        <textarea
-                            id="editor-textarea"
-                            ref={textareaRef}
-                            value={value}
-                            onChange={(e) => handleChange(e.target.value)}
-                            onKeyDown={handleKeyDown}
-                            className="flex-1 w-full p-6 text-sm text-slate-800 bg-transparent resize-none outline-none leading-[1.8] placeholder:text-slate-300"
-                            style={{ fontFamily: fontFamily, minHeight: '520px' }}
-                            placeholder={`Escribí aquí usando Markdown...
-
-# Título principal
-## Subtítulo
-
-**Negrita**, *cursiva*, ~~tachado~~
-
-- Lista de elementos
-- Otro elemento
-
-> Cita importante
-
-| Col 1 | Col 2 |
-|-------|-------|
-| dato  | dato  |`}
-                            spellCheck="true"
-                        />
-                        {/* Footer con info */}
-                        <div className="flex items-center justify-between px-4 py-1.5 bg-slate-50 border-t border-slate-100 text-[10px] text-slate-400 font-mono">
-                            <span>{value.split('\n').length} líneas · {value.length} caracteres</span>
-                            <span className="hidden md:block">Ctrl+B Negrita · Ctrl+I Cursiva · Ctrl+K Link · Ctrl+Z Deshacer</span>
-                        </div>
-                    </div>
-                )}
-
-                {/* Preview pane */}
-                {(activeTab === 'preview' || activeTab === 'split') && (
-                    <div className={`flex-1 ${activeTab === 'split' ? 'w-1/2' : 'w-full'} overflow-y-auto`}>
-                        {value.trim() ? (
-                            <div className="p-6 prose-sm" style={{ fontFamily: fontFamily }}>
-                                <ReactMarkdown
-                                    remarkPlugins={[remarkGfm, remarkMath]}
-                                    rehypePlugins={[rehypeKatex]}
-                                    components={components}
-                                >
-                                    {value}
-                                </ReactMarkdown>
-                            </div>
-                        ) : (
-                            <div className="flex items-center justify-center h-full text-slate-300 text-sm">
-                                <div className="text-center">
-                                    <Eye size={40} className="mx-auto mb-3 opacity-30" />
-                                    <p className="font-medium">La previsualización aparecerá aquí</p>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                )}
+            {/* Contenedor del Editor Quill */}
+            <div className="quill-premium-wrapper" style={{ fontFamily }}>
+                <ReactQuill
+                    theme="snow"
+                    value={value}
+                    onChange={onChange}
+                    modules={modules}
+                    formats={formats}
+                    placeholder="Escribí tu contenido aquí..."
+                    className="h-full min-h-[500px]"
+                />
             </div>
+
+            {/* Footer con info */}
+            <div className="flex items-center justify-between px-4 py-1.5 bg-slate-50 border-t border-slate-100 text-[10px] text-slate-400 font-mono">
+                <span>{countWords(value)} palabras</span>
+                <span className="hidden md:block">Editor con soporte WYSIWYG</span>
+            </div>
+
         </div>
     );
 };

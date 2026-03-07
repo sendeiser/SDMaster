@@ -64,7 +64,7 @@ GENERACIÓN REQUERIDA:
 - Materia: ${subject}
 - Año/Nivel: ${year}
 - Tema Principal: ${topic}
-- Tiempo Estimado: ${duration}
+- Tiempo Estimado (Total de la clase/secuencia): ${duration}
 - Estructura Base: ${structure}
 - Incluir Multimedia: ${includeMedia ? 'SÍ' : 'NO'}
 
@@ -72,11 +72,15 @@ ${suggestions ? `SUGERENCIAS ADICIONALES DEL USUARIO:
 ${suggestions}
 ----------------------------------------------------` : ''}
 
-REQUISITOS CRÍTICOS DE CONTENIDO:
+REQUISITOS CRÍTICOS DE CONTENIDO Y ORQUESTACIÓN:
 1. MAXIMIZAR EJERCITACIÓN: La secuencia DEBE ser extremadamente completa. Incluye una sección extensa de "Actividades y Problemas" con al menos 10-15 ejercicios, problemas o desafíos prácticos detallados.
 2. COMPLETITUD: No resumas. Desarrolla cada consigna, explica el paso a paso de las actividades y asegúrate de que el material sea listo para usar en clase.
 3. SI HAY PLANTILLA: Imita el formato, los títulos y la organización visual de la "PLANTILLA ESTRUCTURAL" de arriba.
 4. FORMATO: Usa '# ' para títulos, '## ' para secciones y '-' para listas.
+5. CONTROL ESTRICTO DEL TIEMPO (CRONOGRAMA MATEMÁTICO):
+   - Al inicio o final de CADA actividad o momento de la clase, DEBES especificar EXACTAMENTE el tiempo que le tomará a los estudiantes realizarla en MINUTOS (ej: "Duración: 15 minutos").
+   - El tiempo asignado a cada ejercicio debe ser realista de acuerdo a la demanda cognitiva.
+   - LA SUMA PERFECTA Y MATEMÁTICA DE TODOS ESTOS MINUTOS INDIVIDUALES DEBE IGUALAR EXACTAMENTE AL "Tiempo Estimado" total indicado en '${duration}'. Si sobra tiempo, crea más actividades; si falta, ajusta las estimaciones, pero el total DEBE cuadrar perfectamente en formato numérico justificado.
 `;
 
         try {
