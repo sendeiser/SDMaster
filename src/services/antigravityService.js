@@ -141,5 +141,89 @@ REQUISITOS CRÍTICOS DE CONTENIDO Y ORQUESTACIÓN:
             console.error("Error al llamar a Gemini API:", error);
             throw error;
         }
+    },
+
+    async generateAssessment(params) {
+        const {
+            subject, year, topic,
+            type = 'Examen Tradicional',
+            difficulty = 'Intermedio',
+            itemsCount = 5,
+            selectedDocs = [],
+            selectedSequences = [], // [{topic, content}]
+            selectedCategories = [],
+            suggestions = ''
+        } = params;
+
+        // 1. Obtener contexto RAG (Documentos de la KB)
+        const contextQuery = `${subject} ${topic} ${year}`;
+        const relevantChunks = await ragService.retrieveContext(
+            contextQuery,
+            5,
+            selectedCategories,
+            selectedDocs
+        );
+        let contextString = relevantChunks.length > 0
+            ? relevantChunks.map((chunk, i) => `--- Fragmento KB ${i + 1} ---\n${chunk.content}`).join('\n\n')
+            : "";
+
+        // 2. Integrar contexto de Secuencias Didácticas seleccionadas
+        if (selectedSequences && selectedSequences.length > 0) {
+            const sequencesString = selectedSequences.map((seq, i) =>
+                `--- Secuencia Didáctica de Referencia ${i + 1}: ${seq.topic} ---\n${seq.content}`
+            ).join('\n\n');
+            contextString = contextString
+                ? `${contextString}\n\n${sequencesString}`
+                : sequencesString;
+        }
+
+        if (!contextString) {
+            contextString = "No hay documentos específicos de la KB ni secuencias didácticas seleccionadas como contexto previo.";
+        }
+
+        const prompt = `
+CREAR EVALUACIÓN FINAL:
+- Materia: ${subject}
+- Año/Nivel: ${year}
+- Tema Principal: ${topic}
+- Tipo de Evaluación Estructural: ${type}
+- Nivel de Dificultad Cognitiva: ${difficulty}
+- Cantidad aproximada de ítems/preguntas: ${itemsCount}
+
+----------------------------------------------------
+CONTEXTO DE REFERENCIA (KB + SECUENCIAS):
+${contextString}
+----------------------------------------------------
+
+${suggestions ? `INDICACIONES ADICIONALES DEL DOCENTE:
+${suggestions}
+` : ''}
+
+REQUISITOS PEDAGÓGICOS Y ESTRUCTURALES:
+1. ALINEACIÓN: La evaluación DEBE estar estrictamente alineada con los contenidos presentados en el "CONTEXTO DE REFERENCIA".
+2. ENCABEZADO PROFESIONAL: Incluye campos para Nombre del Alumno, Institución, Curso y Fecha.
+3. CLARIDAD: Consignas precisas, adaptadas al lenguaje del nivel ${year}.
+4. TABLAS Y FORMATO: Si la evaluación requiere rúbricas o cuadros comparativos, usa tablas Markdown.
+5. SOLUCIONARIO/CRITERIOS: OBLIGATORIO incluir al final una sección de "Clave de Respuestas" o "Criterios de Calificación" detallados para el docente.
+`;
+
+        try {
+            const ai = getAI();
+            const model = ai.getGenerativeModel({
+                model: 'gemini-3-flash-preview',
+                systemInstruction: SYSTEM_PROMPTS.ASSESSMENT_EXPERT
+            });
+
+            const response = await model.generateContent(prompt);
+            const textResponse = response.response.text();
+
+            return {
+                success: true,
+                content: textResponse
+            };
+        } catch (error) {
+            console.error("Error al generar evaluación:", error);
+            throw error;
+        }
     }
 };

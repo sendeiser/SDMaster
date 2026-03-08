@@ -134,6 +134,40 @@ export const sequenceDbService = {
     },
 
     /**
+     * Sube un avatar al bucket 'profiles'
+     */
+    async uploadAvatar(file) {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error('No hay sesión activa');
+
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${user.id}/avatar.${fileExt}`;
+            const filePath = `${fileName}`;
+
+            // Subir archivo (con upsert para reemplazar el anterior)
+            const { error: uploadError } = await supabase.storage
+                .from('profiles')
+                .upload(filePath, file, {
+                    upsert: true,
+                    cacheControl: '3600'
+                });
+
+            if (uploadError) throw uploadError;
+
+            // Obtener URL pública
+            const { data: { publicUrl } } = supabase.storage
+                .from('profiles')
+                .getPublicUrl(filePath);
+
+            return publicUrl;
+        } catch (error) {
+            console.error('Error subiendo avatar:', error);
+            throw error;
+        }
+    },
+
+    /**
      * Cambia la visibilidad de una secuencia (Pública/Privada)
      */
     async toggleVisibility(id, isPublic) {

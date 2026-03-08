@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
     User, Settings as SettingsIcon, Save, Monitor, Clock, LogOut,
-    BookOpen, GraduationCap, Camera, Lock, CheckCircle2, AlertCircle, Loader2
+    BookOpen, GraduationCap, Camera, Lock, CheckCircle2, AlertCircle, Loader2, Sparkles
 } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import { sequenceDbService } from '../lib/sequenceDbService';
@@ -17,7 +17,7 @@ const Settings = ({ session }) => {
     });
     const [preferences, setPreferences] = useState({
         defaultDuration: '2h',
-        defaultTheme: 'classic',
+        defaultTheme: 'midnight',
         defaultStructure: 'Tradicional'
     });
 
@@ -35,7 +35,6 @@ const Settings = ({ session }) => {
     const loadUserData = async () => {
         setLoading(true);
         try {
-            // Cargar perfil de DB
             const data = await sequenceDbService.getProfile();
             if (data) {
                 setProfile({
@@ -46,7 +45,6 @@ const Settings = ({ session }) => {
                 });
             }
 
-            // Cargar preferencias de LocalStorage
             const stored = localStorage.getItem('sd_preferences');
             if (stored) {
                 setPreferences(JSON.parse(stored));
@@ -69,7 +67,6 @@ const Settings = ({ session }) => {
     };
 
     const handleArrayChange = (name, value) => {
-        // Convertir string separado por comas a array
         const arr = value.split(',').map(item => item.trim()).filter(Boolean);
         setProfile(prev => ({ ...prev, [name]: arr }));
     };
@@ -77,12 +74,8 @@ const Settings = ({ session }) => {
     const handleSaveAll = async () => {
         setSaving(true);
         try {
-            // Guardar Perfil en Supabase
             await sequenceDbService.updateProfile(profile);
-
-            // Guardar Preferencias en LocalStorage
             localStorage.setItem('sd_preferences', JSON.stringify(preferences));
-
             setStatus({ type: 'success', message: '¡Configuración guardada correctamente!' });
         } catch (error) {
             setStatus({ type: 'error', message: 'Error al guardar: ' + error.message });
@@ -92,16 +85,41 @@ const Settings = ({ session }) => {
         }
     };
 
+    const handleFileChange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        setSaving(true);
+        setStatus({ type: 'info', message: 'Subiendo imagen...' });
+        try {
+            const publicUrl = await sequenceDbService.uploadAvatar(file);
+            const updatedProfile = { ...profile, avatar_url: publicUrl };
+            setProfile(updatedProfile);
+            await sequenceDbService.updateProfile(updatedProfile);
+            setStatus({ type: 'success', message: 'Foto de perfil actualizada' });
+        } catch (error) {
+            setStatus({ type: 'error', message: 'Error al subir: ' + error.message });
+        } finally {
+            setSaving(false);
+            setTimeout(() => setStatus({ type: '', message: '' }), 4000);
+        }
+    };
+
     const handlePasswordUpdate = async (e) => {
         e.preventDefault();
-        if (passwordData.newPassword !== passwordData.confirmPassword) {
+        const { newPassword, confirmPassword } = passwordData;
+        if (newPassword !== confirmPassword) {
             setStatus({ type: 'error', message: 'Las contraseñas no coinciden' });
+            return;
+        }
+        if (newPassword.length < 6) {
+            setStatus({ type: 'error', message: 'Mínimo 6 caracteres' });
             return;
         }
 
         setSaving(true);
         try {
-            await sequenceDbService.updatePassword(passwordData.newPassword);
+            await sequenceDbService.updatePassword(newPassword);
             setStatus({ type: 'success', message: 'Contraseña actualizada con éxito' });
             setPasswordData({ newPassword: '', confirmPassword: '' });
         } catch (error) {
@@ -118,39 +136,40 @@ const Settings = ({ session }) => {
 
     if (loading) {
         return (
-            <div className="flex-grow flex items-center justify-center bg-slate-50">
+            <div className="flex-grow flex items-center justify-center bg-slate-50 dark:bg-slate-950">
                 <div className="flex flex-col items-center space-y-4">
                     <Loader2 size={40} className="animate-spin text-brand-500" />
-                    <p className="text-sm font-black text-slate-400 uppercase tracking-widest">Sincronizando perfil...</p>
+                    <p className="text-sm font-black text-slate-400 dark:text-slate-600 uppercase tracking-widest">Sincronizando perfil...</p>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="flex-grow bg-slate-50 p-4 md:p-8 lg:p-12 overflow-y-auto custom-scrollbar flex justify-center">
+        <div className="flex-grow bg-slate-50 dark:bg-slate-950 p-4 md:p-8 lg:p-12 overflow-y-auto custom-scrollbar flex justify-center">
             <div className="max-w-5xl w-full space-y-8">
 
                 {/* Header Dinámico */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
                     <div className="flex items-center gap-6">
                         <div className="relative group">
-                            <div className="w-20 h-20 rounded-2xl bg-brand-50 flex items-center justify-center overflow-hidden border-2 border-brand-100 shadow-inner">
+                            <div className="w-20 h-20 rounded-2xl bg-brand-50 dark:bg-slate-800 flex items-center justify-center overflow-hidden border-2 border-brand-100 dark:border-slate-700 shadow-inner">
                                 {profile.avatar_url ? (
                                     <img src={profile.avatar_url} className="w-full h-full object-cover" alt="Perfil" />
                                 ) : (
-                                    <User size={32} className="text-brand-300" />
+                                    <User size={32} className="text-brand-300 dark:text-slate-600" />
                                 )}
                             </div>
-                            <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-white rounded-lg shadow-md border border-slate-100 flex items-center justify-center text-slate-400 group-hover:text-brand-500 transition-colors cursor-pointer">
+                            <label className="absolute -bottom-1 -right-1 w-7 h-7 bg-white dark:bg-slate-700 rounded-lg shadow-md border border-slate-100 dark:border-slate-600 flex items-center justify-center text-slate-400 hover:text-brand-500 transition-colors cursor-pointer">
                                 <Camera size={14} />
-                            </div>
+                                <input type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
+                            </label>
                         </div>
                         <div>
-                            <h2 className="text-2xl font-black text-slate-900 tracking-tight">
+                            <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
                                 {profile.full_name || 'Configura tu nombre'}
                             </h2>
-                            <p className="text-slate-500 font-medium">{session?.user?.email}</p>
+                            <p className="text-slate-500 dark:text-slate-400 font-medium">{session?.user?.email}</p>
                         </div>
                     </div>
                     <button
@@ -164,7 +183,7 @@ const Settings = ({ session }) => {
                 </div>
 
                 {status.message && (
-                    <div className={`p-4 rounded-2xl flex items-center gap-3 animate-fade-in ${status.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
+                    <div className={`p-4 rounded-2xl flex items-center gap-3 animate-fade-in ${status.type === 'success' ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/30' : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border border-red-100 dark:border-red-900/30'}`}>
                         {status.type === 'success' ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
                         <p className="font-bold text-sm">{status.message}</p>
                     </div>
@@ -175,82 +194,71 @@ const Settings = ({ session }) => {
                     {/* Columna Izquierda: Datos Personales y Académicos */}
                     <div className="lg:col-span-2 space-y-8">
 
-                        {/* Mi Perfil */}
-                        <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-sm space-y-6">
+                        <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-100 dark:border-slate-800 shadow-sm space-y-6">
                             <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                                 <User size={16} /> Información Personal
                             </h3>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
-                                    <label className="block text-sm font-bold text-slate-700 mb-2">Nombre Completo</label>
+                                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Nombre Completo</label>
                                     <input
                                         type="text"
                                         name="full_name"
                                         value={profile.full_name}
                                         onChange={handleProfileChange}
                                         placeholder="Ej. Prof. Juan Pérez"
-                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/10 focus:border-brand-500 outline-none transition-all font-medium"
+                                        className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-brand-500/10 focus:border-brand-500 outline-none transition-all font-medium text-slate-800 dark:text-slate-200"
                                     />
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-bold text-slate-700 mb-2">URL de Foto de Perfil</label>
-                                    <input
-                                        type="text"
-                                        name="avatar_url"
-                                        value={profile.avatar_url}
-                                        onChange={handleProfileChange}
-                                        placeholder="https://tu-foto.jpg"
-                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/10 focus:border-brand-500 outline-none transition-all font-medium"
-                                    />
+                                <div className="flex flex-col justify-center">
+                                    <p className="text-xs text-slate-400 dark:text-slate-500 font-medium">Puedes cambiar tu foto haciendo clic en el ícono de la cámara arriba.</p>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Preferencias Académicas */}
-                        <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-sm space-y-6">
+                        <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-100 dark:border-slate-800 shadow-sm space-y-6">
                             <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                                 <GraduationCap size={16} /> Perfil Académico
                             </h3>
 
                             <div className="space-y-6">
                                 <div>
-                                    <label className="block text-sm font-bold text-slate-700 mb-2">Materias que Dictas (Separadas por comas)</label>
+                                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Materias que Dictas (Separadas por comas)</label>
                                     <textarea
                                         rows="2"
                                         placeholder="Matemática, Física, Robótica..."
                                         value={profile.subjects.join(', ')}
                                         onChange={(e) => handleArrayChange('subjects', e.target.value)}
-                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/10 focus:border-brand-500 outline-none transition-all font-medium resize-none"
+                                        className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-brand-500/10 focus:border-brand-500 outline-none transition-all font-medium resize-none text-slate-800 dark:text-slate-200"
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-bold text-slate-700 mb-2">Cursos/Años (Separados por comas)</label>
+                                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Cursos/Años (Separados por comas)</label>
                                     <input
                                         type="text"
                                         placeholder="1° Año, 2° Año, 5° B"
                                         value={profile.courses.join(', ')}
                                         onChange={(e) => handleArrayChange('courses', e.target.value)}
-                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/10 focus:border-brand-500 outline-none transition-all font-medium"
+                                        className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-brand-500/10 focus:border-brand-500 outline-none transition-all font-medium text-slate-800 dark:text-slate-200"
                                     />
                                 </div>
                             </div>
                         </div>
 
-                        {/* Seguridad */}
-                        <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-sm">
+                        <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-100 dark:border-slate-800 shadow-sm">
                             <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 mb-6">
                                 <Lock size={16} /> Seguridad de la Cuenta
                             </h3>
                             <form onSubmit={handlePasswordUpdate} className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
                                 <div>
-                                    <label className="block text-sm font-bold text-slate-700 mb-2">Nueva Contraseña</label>
+                                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Nueva Contraseña</label>
                                     <input
                                         type="password"
                                         required
                                         value={passwordData.newPassword}
                                         onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
-                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/10 focus:border-brand-500 outline-none transition-all font-medium"
+                                        className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-brand-500/10 focus:border-brand-500 outline-none transition-all font-medium text-slate-800 dark:text-slate-200"
                                         placeholder="Mínimo 6 chars"
                                     />
                                 </div>
@@ -260,12 +268,12 @@ const Settings = ({ session }) => {
                                         required
                                         value={passwordData.confirmPassword}
                                         onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
-                                        className="flex-grow px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/10 focus:border-brand-500 outline-none transition-all font-medium"
+                                        className="flex-grow px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-brand-500/10 focus:border-brand-500 outline-none transition-all font-medium text-slate-800 dark:text-slate-200"
                                         placeholder="Repetir..."
                                     />
                                     <button
                                         type="submit"
-                                        className="px-6 py-3 bg-slate-900 hover:bg-black text-white rounded-xl font-bold transition-all shadow-lg"
+                                        className="px-6 py-3 bg-slate-900 dark:bg-brand-600 hover:bg-black dark:hover:bg-brand-700 text-white rounded-xl font-bold transition-all shadow-lg"
                                     >
                                         Cambiar
                                     </button>
@@ -276,8 +284,8 @@ const Settings = ({ session }) => {
 
                     {/* Columna Derecha: Preferencias Generador */}
                     <div className="space-y-8">
-                        <div className="bg-white rounded-3xl p-8 border-2 border-brand-50 shadow-sm space-y-6 lg:sticky lg:top-8">
-                            <h3 className="text-xs font-black text-brand-600 uppercase tracking-widest flex items-center gap-2">
+                        <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 border-2 border-brand-50 dark:border-slate-800 shadow-sm space-y-6 lg:sticky lg:top-8">
+                            <h3 className="text-xs font-black text-brand-600 dark:text-brand-400 uppercase tracking-widest flex items-center gap-2">
                                 <Monitor size={16} /> Defaults del Generador
                             </h3>
 
@@ -285,7 +293,7 @@ const Settings = ({ session }) => {
                                 <div>
                                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Materia Predeterminada</label>
                                     <select
-                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 focus:border-brand-500 outline-none"
+                                        className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-700 dark:text-slate-200 focus:border-brand-500 outline-none"
                                         name="defaultSubject"
                                         value={preferences.defaultSubject || ''}
                                         onChange={handlePreferenceChange}
@@ -296,39 +304,24 @@ const Settings = ({ session }) => {
                                 </div>
 
                                 <div>
-                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Tema Visual</label>
+                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Tema Visual Premium</label>
                                     <select
-                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 focus:border-brand-500 outline-none"
+                                        className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-700 dark:text-slate-200 focus:border-brand-500 outline-none"
                                         name="defaultTheme"
                                         value={preferences.defaultTheme}
                                         onChange={handlePreferenceChange}
                                     >
-                                        <option value="classic">Clásico</option>
-                                        <option value="minimalist">Minimalista</option>
-                                        <option value="colorful">Dinámico</option>
-                                        <option value="academic">Académico</option>
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Estructura</label>
-                                    <select
-                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 focus:border-brand-500 outline-none"
-                                        name="defaultStructure"
-                                        value={preferences.defaultStructure}
-                                        onChange={handlePreferenceChange}
-                                    >
-                                        <option value="Tradicional">Tradicional</option>
-                                        <option value="ABP">Proyectos (ABP)</option>
-                                        <option value="Flipped">Aula Invertida</option>
-                                        <option value="Gamificación">Gamificación</option>
+                                        <option value="midnight">Midnight Pro</option>
+                                        <option value="solar">Solar Gold</option>
+                                        <option value="emerald">Emerald Luxe</option>
+                                        <option value="nordic">Nordic Ice</option>
                                     </select>
                                 </div>
 
                                 <div className="pt-6">
                                     <button
                                         onClick={handleLogout}
-                                        className="w-full flex items-center justify-center gap-2 py-3 border-2 border-slate-100 text-slate-400 hover:text-red-500 hover:border-red-100 hover:bg-red-50 rounded-xl font-bold transition-all text-xs uppercase tracking-widest"
+                                        className="w-full flex items-center justify-center gap-2 py-3 border-2 border-slate-100 dark:border-slate-800 text-slate-400 hover:text-red-500 hover:border-red-100 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-xl font-bold transition-all text-xs uppercase tracking-widest"
                                     >
                                         <LogOut size={14} /> Salida Segura
                                     </button>

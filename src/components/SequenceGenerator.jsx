@@ -40,6 +40,61 @@ turndownService.escape = function (string) {
         .replace(/>/g, '&gt;');
 };
 
+// ————— Theme Definitions —————
+const THEMES_CONFIG = {
+    midnight: {
+        h1: "text-3xl font-black text-slate-900 dark:text-white border-b-2 border-brand-500 pb-2 mb-6 mt-8 p-1",
+        h2: "text-xl font-bold text-slate-800 dark:text-slate-100 border-l-4 border-brand-400 pl-3 mb-4 mt-6",
+        h3: "text-lg font-bold text-slate-700 dark:text-slate-300 mb-3 mt-5",
+        p: "text-slate-600 dark:text-slate-400 leading-relaxed mb-4 text-sm md:text-base break-words whitespace-pre-wrap",
+        quote: "border-l-4 border-slate-200 dark:border-slate-700 pl-4 py-2 italic text-slate-500 my-6 bg-slate-50/50 dark:bg-slate-800/50 rounded-r-lg",
+        tableHeader: "bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200",
+        link: "text-brand-600 dark:text-brand-400 hover:underline",
+    },
+    solar: {
+        h1: "text-3xl font-black text-amber-900 border-b-2 border-amber-500 pb-2 mb-6 mt-8 p-1",
+        h2: "text-xl font-bold text-amber-800 border-l-4 border-amber-400 pl-3 mb-4 mt-6",
+        h3: "text-lg font-bold text-amber-700 mb-3 mt-5",
+        p: "text-amber-900/80 leading-relaxed mb-4 text-sm md:text-base break-words whitespace-pre-wrap",
+        quote: "border-l-4 border-amber-200 pl-4 py-2 italic text-amber-600 my-6 bg-amber-50/50 rounded-r-lg",
+        tableHeader: "bg-amber-50 border-b border-amber-200 text-amber-900",
+        link: "text-amber-700 hover:text-amber-900 underline",
+    },
+    emerald: {
+        h1: "text-3xl font-black text-emerald-900 border-b-2 border-emerald-500 pb-2 mb-6 mt-8 p-1",
+        h2: "text-xl font-bold text-emerald-800 border-l-4 border-emerald-400 pl-3 mb-4 mt-6",
+        h3: "text-lg font-bold text-emerald-700 mb-3 mt-5",
+        p: "text-emerald-900/80 leading-relaxed mb-4 text-sm md:text-base break-words whitespace-pre-wrap",
+        quote: "border-l-4 border-emerald-200 pl-4 py-2 italic text-emerald-600 my-6 bg-emerald-50/50 rounded-r-lg",
+        tableHeader: "bg-emerald-50 border-b border-emerald-200 text-emerald-900",
+        link: "text-emerald-700 hover:text-emerald-900 underline",
+    },
+    nordic: {
+        h1: "text-3xl font-light text-slate-900 border-b border-slate-200 pb-2 mb-6 mt-8 tracking-tight p-1",
+        h2: "text-xl font-medium text-slate-800 mb-4 mt-6",
+        h3: "text-lg font-medium text-slate-700 mb-3 mt-5",
+        p: "text-slate-700 leading-loose mb-4 text-sm md:text-base break-words whitespace-pre-wrap",
+        quote: "border-l-2 border-slate-800 pl-4 py-2 italic text-slate-600 my-6",
+        tableHeader: "bg-white border-b border-slate-900 text-slate-900",
+        link: "text-slate-900 hover:text-slate-600 underline",
+    },
+    apa: {
+        h1: "text-2xl font-bold text-black border-none pb-2 mb-8 mt-10 font-serif uppercase tracking-wider text-center p-1",
+        h2: "text-xl font-bold text-black border-none pb-1 mb-6 mt-8 font-serif uppercase tracking-tight",
+        h3: "text-lg font-bold text-black mb-4 mt-6 font-serif italic text-slate-800",
+        p: "text-black leading-relaxed mb-6 text-base break-words whitespace-pre-wrap font-serif text-justify px-2",
+        quote: "pl-8 pr-8 py-4 italic text-slate-700 my-8 font-serif border-l-2 border-slate-300 bg-slate-50/30",
+        tableHeader: "bg-slate-100 border-b-2 border-slate-900 text-black font-serif font-bold uppercase text-xs",
+        link: "text-slate-900 hover:underline font-serif",
+        containerClass: "px-24 py-20 bg-white shadow-2xl scale-[1.02] origin-top",
+    },
+    // Backwards compatibility fallbacks
+    get classic() { return this.midnight; },
+    get minimalist() { return this.nordic; },
+    get colorful() { return this.emerald; },
+    get academic() { return this.solar; }
+};
+
 const SequenceGenerator = ({ isSidebarOpen, setIsSidebarOpen, session, loadedSequence, clearLoadedSequence }) => {
     const [formData, setFormData] = useState({
         subject: '',
@@ -494,46 +549,7 @@ const SequenceGenerator = ({ isSidebarOpen, setIsSidebarOpen, session, loadedSeq
 
     // Componentes personalizados dinámicos según el tema visual seleccionado
     const getMarkdownComponents = (theme) => {
-        const themes = {
-            classic: {
-                h1: "text-3xl font-black text-slate-900 border-b-2 border-brand-500 pb-2 mb-6 mt-8 p-1",
-                h2: "text-xl font-bold text-slate-800 border-l-4 border-brand-400 pl-3 mb-4 mt-6",
-                h3: "text-lg font-bold text-slate-700 mb-3 mt-5",
-                p: "text-slate-600 leading-relaxed mb-4 text-sm md:text-base break-words whitespace-pre-wrap",
-                quote: "border-l-4 border-slate-200 pl-4 py-2 italic text-slate-500 my-6 bg-slate-50/50 rounded-r-lg",
-                tableHeader: "bg-slate-50 border-b border-slate-200 text-slate-800",
-                link: "text-brand-600 hover:text-brand-800 underline",
-            },
-            minimalist: {
-                h1: "text-3xl font-light text-slate-900 border-b border-slate-200 pb-2 mb-6 mt-8 tracking-tight p-1",
-                h2: "text-xl font-medium text-slate-800 mb-4 mt-6",
-                h3: "text-lg font-medium text-slate-700 mb-3 mt-5",
-                p: "text-slate-700 leading-loose mb-4 text-sm md:text-base break-words whitespace-pre-wrap",
-                quote: "border-l-2 border-slate-800 pl-4 py-2 italic text-slate-600 my-6",
-                tableHeader: "bg-white border-b-2 border-slate-900 text-slate-900",
-                link: "text-slate-900 hover:text-slate-600 underline decoration-1",
-            },
-            colorful: {
-                h1: "text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-teal-500 mb-6 mt-8 p-1",
-                h2: "text-xl font-black text-emerald-800 bg-emerald-50 px-3 py-1 rounded-lg inline-block mb-4 mt-6",
-                h3: "text-lg font-bold text-teal-700 mb-3 mt-5",
-                p: "text-slate-700 leading-relaxed mb-4 text-sm md:text-base break-words whitespace-pre-wrap",
-                quote: "border-l-4 border-emerald-400 pl-4 py-2 italic text-emerald-700 my-6 bg-emerald-50/50 rounded-r-lg shadow-sm",
-                tableHeader: "bg-emerald-50 border-b-2 border-emerald-200 text-emerald-800",
-                link: "text-emerald-600 hover:text-emerald-800 font-bold underline decoration-wavy",
-            },
-            academic: {
-                h1: "text-3xl font-bold text-black border-b-2 border-black pb-2 mb-6 mt-8 font-serif uppercase tracking-wider text-center p-1",
-                h2: "text-xl font-bold text-black border-b border-gray-300 pb-1 mb-4 mt-6 font-serif",
-                h3: "text-lg font-bold text-black mb-3 mt-5 font-serif italic",
-                p: "text-black leading-relaxed mb-4 text-sm md:text-base break-words whitespace-pre-wrap font-serif text-justify",
-                quote: "pl-8 pr-8 py-2 italic text-gray-700 my-6 font-serif border-l-4 border-gray-300",
-                tableHeader: "bg-gray-100 border-b border-black text-black font-serif",
-                link: "text-blue-800 hover:text-blue-900 underline font-serif",
-            }
-        };
-
-        const t = themes[theme] || themes.classic;
+        const t = THEMES_CONFIG[theme] || THEMES_CONFIG.classic;
 
         return {
             h1: ({ children }) => <h1 className={t.h1}>{children}</h1>,
@@ -647,10 +663,11 @@ const SequenceGenerator = ({ isSidebarOpen, setIsSidebarOpen, session, loadedSeq
                                     value={formData.theme}
                                     onChange={handleInputChange}
                                     options={[
-                                        { value: 'classic', label: 'Clásico' },
-                                        { value: 'minimalist', label: 'Minimalista' },
-                                        { value: 'colorful', label: 'Dinámico' },
-                                        { value: 'academic', label: 'Académico' }
+                                        { value: 'midnight', label: 'Midnight Pro' },
+                                        { value: 'solar', label: 'Solar Gold' },
+                                        { value: 'emerald', label: 'Emerald Luxe' },
+                                        { value: 'nordic', label: 'Nordic Ice' },
+                                        { value: 'apa', label: 'Académico APA' }
                                     ]}
                                 />
                             </div>
@@ -923,7 +940,7 @@ const SequenceGenerator = ({ isSidebarOpen, setIsSidebarOpen, session, loadedSeq
                                 <div
                                     ref={resultRef}
                                     id="pdf-content"
-                                    className="bg-white px-10 md:px-20 py-16 shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-slate-100 min-h-[1056px] relative overflow-hidden break-words"
+                                    className={`${(THEMES_CONFIG[formData.theme] || THEMES_CONFIG.classic).containerClass || "px-10 md:px-20 py-16 shadow-[0_20px_50px_rgba(0,0,0,0.1)]"} bg-white border border-slate-100 min-h-[1056px] relative overflow-hidden break-words transition-all duration-500`}
                                     style={{ fontFamily: fontFamily }}
                                 >
                                     {/* Membrete Minimalista Profesional (Sin marca de agua) */}
