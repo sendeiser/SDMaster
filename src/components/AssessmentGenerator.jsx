@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { Sparkles, BookType, Calendar, Clock, Loader2, Copy, Check, ArrowRight, FileDown, History, Trash2, ChevronRight, FileText, Video, Edit3, Eye, FileOutput, MessageSquare, Database, CloudUpload, Lock, Globe, ListCheck, ClipboardCheck, GraduationCap } from 'lucide-react';
 import { saveAs } from 'file-saver';
 import ReactMarkdown from 'react-markdown';
@@ -39,13 +39,13 @@ turndownService.escape = function (string) {
 // ————— Theme Definitions (Shared with SequenceGenerator) —————
 const THEMES_CONFIG = {
     midnight: {
-        h1: "text-3xl font-black text-slate-900 dark:text-white border-b-2 border-brand-500 pb-2 mb-6 mt-8 p-1",
-        h2: "text-xl font-bold text-slate-800 dark:text-slate-100 border-l-4 border-brand-400 pl-3 mb-4 mt-6",
-        h3: "text-lg font-bold text-slate-700 dark:text-slate-300 mb-3 mt-5",
-        p: "text-slate-600 dark:text-slate-400 leading-relaxed mb-4 text-sm md:text-base break-words whitespace-pre-wrap",
-        quote: "border-l-4 border-slate-200 dark:border-slate-700 pl-4 py-2 italic text-slate-500 my-6 bg-slate-50/50 dark:bg-slate-800/50 rounded-r-lg",
-        tableHeader: "bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200",
-        link: "text-brand-600 dark:text-brand-400 hover:underline",
+        h1: "text-3xl font-black text-slate-900 border-b-2 border-brand-500 pb-2 mb-6 mt-8 p-1",
+        h2: "text-xl font-bold text-slate-800 border-l-4 border-brand-400 pl-3 mb-4 mt-6",
+        h3: "text-lg font-bold text-slate-700 mb-3 mt-5",
+        p: "text-slate-600 leading-relaxed mb-4 text-sm md:text-base break-words whitespace-pre-wrap",
+        quote: "border-l-4 border-slate-200 pl-4 py-2 italic text-slate-500 my-6 bg-slate-50/50 rounded-r-lg",
+        tableHeader: "bg-slate-50 border-b border-slate-200 text-slate-800",
+        link: "text-brand-600 hover:underline",
     },
     solar: {
         h1: "text-3xl font-black text-amber-900 border-b-2 border-amber-500 pb-2 mb-6 mt-8 p-1",
@@ -315,15 +315,15 @@ const AssessmentGenerator = ({ isSidebarOpen, setIsSidebarOpen, session }) => {
     };
 
     return (
-        <div className="flex-grow flex flex-col md:flex-row h-full overflow-hidden bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
+        <div className="flex-grow flex flex-col md:flex-row h-full overflow-hidden bg-slate-50 transition-colors duration-300">
             {/* Sidebar de Configuración */}
-            <aside className={`${isSidebarOpen ? 'w-full md:w-96' : 'w-0'} bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-all duration-500 ease-in-out relative flex flex-col z-40 overflow-hidden`}>
+            <aside className={`${isSidebarOpen ? 'w-full md:w-96' : 'w-0'} bg-white border-r border-slate-200 transition-all duration-500 ease-in-out relative flex flex-col z-40 overflow-hidden`}>
                 <div className="p-8 flex-grow overflow-y-auto custom-scrollbar">
                     <div className="flex items-center space-x-3 mb-8">
                         <div className="w-10 h-10 bg-brand-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-brand-500/20">
                             <ClipboardCheck size={20} />
                         </div>
-                        <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight uppercase">Evaluaciones <span className="text-brand-600">AI</span></h2>
+                        <h2 className="text-xl font-black text-slate-900 tracking-tight uppercase">Evaluaciones <span className="text-brand-600">AI</span></h2>
                     </div>
 
                     <div className="space-y-6">
@@ -340,17 +340,17 @@ const AssessmentGenerator = ({ isSidebarOpen, setIsSidebarOpen, session }) => {
                         <InputField label="Cantidad de Ítems" icon={<ListCheck size={18} />} name="itemsCount" value={formData.itemsCount} onChange={handleInputChange} placeholder="5" />
 
                         {/* Fuente de Conocimiento - Secuencias */}
-                        <div className="space-y-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+                        <div className="space-y-3 pt-4 border-t border-slate-100">
                             <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1 flex items-center justify-between">
                                 <span>Secuencias de Referencia</span>
                                 <span className="bg-brand-100 text-brand-600 px-1.5 py-0.5 rounded-md text-[8px]">{userSequences.length}</span>
                             </label>
-                            <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto p-2 border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 rounded-2xl custom-scrollbar">
+                            <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto p-2 border border-slate-200 bg-slate-50/50 rounded-2xl custom-scrollbar">
                                 {userSequences.length > 0 ? userSequences.map(seq => (
                                     <button
                                         key={seq.id}
                                         onClick={() => toggleSequenceSelection(seq.id)}
-                                        className={`flex items-center justify-between p-3 rounded-xl border transition-all text-left group ${selectedSequences.includes(seq.id) ? 'bg-brand-50 border-brand-200 text-brand-700 dark:bg-brand-900/40 dark:border-brand-800' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 hover:border-brand-200'}`}
+                                        className={`flex items-center justify-between p-3 rounded-xl border transition-all text-left group ${selectedSequences.includes(seq.id) ? 'bg-brand-50 border-brand-200 text-brand-700' : 'bg-white border-slate-200 text-slate-500 hover:border-brand-200'}`}
                                     >
                                         <div className="flex flex-col min-w-0">
                                             <span className="text-[10px] font-bold truncate pr-2 uppercase tracking-tight">{seq.topic}</span>
@@ -368,14 +368,14 @@ const AssessmentGenerator = ({ isSidebarOpen, setIsSidebarOpen, session }) => {
                         <div className="space-y-3 pt-2">
                             <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1 flex items-center justify-between">
                                 <span>Contenidos de la KB</span>
-                                <span className="bg-slate-100 dark:bg-slate-800 text-slate-500 px-1.5 py-0.5 rounded-md text-[8px]">{existingDocs.length}</span>
+                                <span className="bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-md text-[8px]">{existingDocs.length}</span>
                             </label>
-                            <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto p-2 border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 rounded-2xl custom-scrollbar">
+                            <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto p-2 border border-slate-200 bg-slate-50/50 rounded-2xl custom-scrollbar">
                                 {existingDocs.length > 0 ? existingDocs.map(doc => (
                                     <button
                                         key={doc.name}
                                         onClick={() => toggleDocSelection(doc.name)}
-                                        className={`flex items-center justify-between p-3 rounded-xl border transition-all text-left group ${selectedDocs.includes(doc.name) ? 'bg-amber-50 border-amber-200 text-amber-700 dark:bg-amber-900/20 dark:border-amber-800' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 hover:border-amber-200'}`}
+                                        className={`flex items-center justify-between p-3 rounded-xl border transition-all text-left group ${selectedDocs.includes(doc.name) ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-white border-slate-200 text-slate-500 hover:border-amber-200'}`}
                                     >
                                         <div className="flex items-center space-x-2 min-w-0">
                                             <Database size={10} className={selectedDocs.includes(doc.name) ? 'text-amber-500' : 'text-slate-300'} />
@@ -392,7 +392,7 @@ const AssessmentGenerator = ({ isSidebarOpen, setIsSidebarOpen, session }) => {
                         <button
                             onClick={generateAssessment}
                             disabled={isGenerating || !formData.subject || !formData.topic}
-                            className={`w-full py-4 rounded-[2rem] font-black text-sm uppercase tracking-widest transition-all transform active:scale-95 flex items-center justify-center space-x-3 shadow-xl ${isGenerating ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-slate-900 dark:bg-brand-600 hover:bg-slate-800 dark:hover:bg-brand-500 text-white shadow-brand-500/20 shadow-lg'}`}
+                            className={`w-full py-4 rounded-[2rem] font-black text-sm uppercase tracking-widest transition-all transform active:scale-95 flex items-center justify-center space-x-3 shadow-xl ${isGenerating ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-slate-900 hover:bg-slate-800:bg-brand-500 text-white shadow-brand-500/20 shadow-lg'}`}
                         >
                             {isGenerating ? <Loader2 className="animate-spin" size={20} /> : <Sparkles size={20} />}
                             <span>{isGenerating ? 'Vinculando Fuentes...' : 'Generar con Contexto'}</span>
@@ -404,20 +404,20 @@ const AssessmentGenerator = ({ isSidebarOpen, setIsSidebarOpen, session }) => {
             {/* Area de Visualización Principal */}
             <main className="flex-grow flex flex-col relative min-w-0">
                 {/* Herramientas de Cabecera */}
-                <div className="h-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-8 sticky top-0 z-30">
+                <div className="h-16 bg-white/80 backdrop-blur-sm border-b border-slate-200 flex items-center justify-between px-8 sticky top-0 z-30">
                     <div className="flex items-center space-x-4">
-                        <button onClick={toggleEdit} className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-black transition-all ${isEditing ? 'bg-brand-600 text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}`}>
+                        <button onClick={toggleEdit} className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-black transition-all ${isEditing ? 'bg-brand-600 text-white' : 'text-slate-600 hover:bg-slate-100:bg-slate-800'}`}>
                             {isEditing ? <Eye size={16} /> : <Edit3 size={16} />}
                             <span>{isEditing ? 'Vista Previa' : 'Modo Editor'}</span>
                         </button>
-                        <div className="w-px h-5 bg-slate-200 dark:bg-slate-800 mx-2" />
+                        <div className="w-px h-5 bg-slate-200 mx-2" />
                         <SelectFieldMinimal name="theme" value={formData.theme} onChange={handleInputChange} options={Object.keys(THEMES_CONFIG).map(k => ({ value: k, label: k.charAt(0).toUpperCase() + k.slice(1) }))} />
                     </div>
 
                     {result && (
                         <div className="flex items-center space-x-2">
                             <ToolbarButton onClick={downloadWord} icon={<FileOutput size={15} />} label="Word" />
-                            <div className="w-px h-5 bg-slate-200 dark:bg-slate-800 mx-1" />
+                            <div className="w-px h-5 bg-slate-200 mx-1" />
                             <ToolbarButton onClick={downloadPDF} icon={<FileDown size={15} />} label="PDF" highlighted />
                         </div>
                     )}
@@ -427,7 +427,7 @@ const AssessmentGenerator = ({ isSidebarOpen, setIsSidebarOpen, session }) => {
                     {isGenerating ? (
                         <div className="flex flex-col items-center justify-center space-y-6 animate-pulse mt-20">
                             <Loader2 size={48} className="animate-spin text-brand-600" />
-                            <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Diseñando Evaluación...</h3>
+                            <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">Diseñando Evaluación...</h3>
                         </div>
                     ) : result ? (
                         <div className="w-full max-w-screen-lg animate-scale-up origin-top relative pb-20">
@@ -452,7 +452,7 @@ const AssessmentGenerator = ({ isSidebarOpen, setIsSidebarOpen, session }) => {
                     ) : (
                         <div className="flex flex-col items-center justify-center space-y-6 mt-20 text-center opacity-30">
                             <GraduationCap size={64} className="text-slate-400" />
-                            <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Sin Evaluación</h3>
+                            <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter">Sin Evaluación</h3>
                             <p className="max-w-xs text-sm font-medium text-slate-500">Configura los parámetros y haz clic en "Generar" para crear una evaluación a medida.</p>
                         </div>
                     )}
@@ -468,7 +468,7 @@ const InputField = ({ label, icon, name, value, onChange, placeholder }) => (
         <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1 group-focus-within:text-brand-600 transition-colors">{label}</label>
         <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-brand-500 transition-all">{icon}</div>
-            <input type="text" name={name} value={value} onChange={onChange} className="pl-12 w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/50 py-4 px-4 text-sm font-bold text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-4 focus:ring-brand-500/10 focus:border-brand-500 transition-all placeholder:text-slate-200 shadow-sm" placeholder={placeholder} />
+            <input type="text" name={name} value={value} onChange={onChange} className="pl-12 w-full rounded-2xl border border-slate-200 bg-white/50 py-4 px-4 text-sm font-bold text-slate-800 focus:outline-none focus:ring-4 focus:ring-brand-500/10 focus:border-brand-500 transition-all placeholder:text-slate-200 shadow-sm" placeholder={placeholder} />
         </div>
     </div>
 );
@@ -476,20 +476,20 @@ const InputField = ({ label, icon, name, value, onChange, placeholder }) => (
 const SelectField = ({ label, name, value, onChange, options }) => (
     <div className="space-y-2">
         <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">{label}</label>
-        <select name={name} value={value} onChange={onChange} className="w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/50 py-4 px-4 text-sm font-bold text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-4 focus:ring-brand-500/10 focus:border-brand-500 cursor-pointer shadow-sm">
+        <select name={name} value={value} onChange={onChange} className="w-full rounded-2xl border border-slate-200 bg-white/50 py-4 px-4 text-sm font-bold text-slate-800 focus:outline-none focus:ring-4 focus:ring-brand-500/10 focus:border-brand-500 cursor-pointer shadow-sm">
             {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
         </select>
     </div>
 );
 
 const SelectFieldMinimal = ({ name, value, onChange, options }) => (
-    <select name={name} value={value} onChange={onChange} className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 bg-transparent border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-1.5 outline-none hover:border-slate-300 transition-all cursor-pointer">
+    <select name={name} value={value} onChange={onChange} className="text-[10px] font-black uppercase tracking-widest text-slate-500 bg-transparent border border-slate-200 rounded-lg px-3 py-1.5 outline-none hover:border-slate-300 transition-all cursor-pointer">
         {options.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
     </select>
 );
 
 const ToolbarButton = ({ onClick, icon, label, highlighted = false }) => (
-    <button onClick={onClick} className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all active:scale-95 group relative ${highlighted ? 'bg-slate-900 dark:bg-brand-600 text-white shadow-lg' : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
+    <button onClick={onClick} className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all active:scale-95 group relative ${highlighted ? 'bg-slate-900 text-white shadow-lg' : 'hover:bg-slate-100:bg-slate-800 text-slate-600'}`}>
         {icon}
         <span className="text-[10px] font-black uppercase tracking-widest hiddn lg:block">{label}</span>
     </button>
