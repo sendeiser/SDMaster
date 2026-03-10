@@ -203,5 +203,74 @@ export const sequenceDbService = {
             console.error('Error eliminando secuencia:', error);
             throw error;
         }
+    },
+
+    /**
+     * ————— Evaluaciones —————
+     */
+
+    async saveAssessment({ subject, year, topic, type, difficulty, content, theme }) {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error('Usuario no autenticado');
+
+            const { data, error } = await supabase
+                .from('saved_assessments')
+                .insert([
+                    {
+                        user_id: user.id,
+                        subject,
+                        year,
+                        topic,
+                        type,
+                        difficulty,
+                        content,
+                        theme: theme || 'midnight'
+                    }
+                ])
+                .select()
+                .single();
+
+            if (error) throw error;
+            return { success: true, data };
+        } catch (error) {
+            console.error('Error guardando evaluación:', error);
+            throw error;
+        }
+    },
+
+    async getUserAssessments() {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error('Usuario no autenticado');
+
+            const { data, error } = await supabase
+                .from('saved_assessments')
+                .select('*')
+                .eq('user_id', user.id)
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+            return data;
+        } catch (error) {
+            console.error('Error obteniendo evaluaciones:', error);
+            throw error;
+        }
+    },
+
+    async deleteAssessment(id) {
+        try {
+            const { error } = await supabase
+                .from('saved_assessments')
+                .delete()
+                .eq('id', id);
+
+            if (error) throw error;
+            return true;
+        } catch (error) {
+            console.error('Error eliminando evaluación:', error);
+            throw error;
+        }
     }
 };
+

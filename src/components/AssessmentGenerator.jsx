@@ -100,9 +100,11 @@ const AssessmentGenerator = ({ isSidebarOpen, setIsSidebarOpen, session }) => {
 
     const [existingDocs, setExistingDocs] = useState([]);
     const [userSequences, setUserSequences] = useState([]);
+    const [savedAssessments, setSavedAssessments] = useState([]); // Nueva lista de evaluaciones
     const [selectedDocs, setSelectedDocs] = useState([]);
     const [selectedSequences, setSelectedSequences] = useState([]); // Array de IDs
     const [isGenerating, setIsGenerating] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
     const [result, setResult] = useState(null);
     const [isEditing, setIsEditing] = useState(false);
     const [editableContent, setEditableContent] = useState('');
@@ -114,18 +116,71 @@ const AssessmentGenerator = ({ isSidebarOpen, setIsSidebarOpen, session }) => {
 
     const loadData = async () => {
         try {
-            const [docs, sequences] = await Promise.all([
+            const [docs, sequences, assessments] = await Promise.all([
                 ragService.fetchUniqueDocuments(),
-                sequenceDbService.getUserSequences()
+                sequenceDbService.getUserSequences(),
+                sequenceDbService.getUserAssessments() // Cargar evaluaciones guardadas
             ]);
             setExistingDocs(docs || []);
             setUserSequences(sequences || []);
+            setSavedAssessments(assessments || []);
         } catch (error) {
             console.error("Error loading data:", error);
         }
     };
 
+    const handleSaveToCloud = async () => {
+        if (!result) return;
+        setIsSaving(true);
+        try {
+            // Si estamos editando, usamos el contenido del editor convertido a MD
+            const contentToSave = isEditing ? turndownService.turndown(editableContent) : result;
+
+            const response = await sequenceDbService.saveAssessment({
+                ...formData,
+                content: contentToSave
+            });
+
+            if (response.success) {
+                alert("Evaluación guardada exitosamente en la nube 🚀");
+                loadData(); // Recargar historial
+            }
+        } catch (error) {
+            console.error("Error saving assessment:", error);
+            alert("No se pudo guardar la evaluación. Verifica tu conexión.");
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleLoadSavedAssessment = (assessment) => {
+        setFormData({
+            subject: assessment.subject,
+            year: assessment.year,
+            topic: assessment.topic,
+            type: assessment.type,
+            difficulty: assessment.difficulty,
+            itemsCount: '?', // No guardado explícitamente pero se infiere
+            theme: assessment.theme || 'midnight'
+        });
+        setResult(assessment.content);
+        setEditableContent(marked.parse(assessment.content || ''));
+        setIsEditing(false);
+    };
+
+    const handleDeleteAssessment = async (e, id) => {
+        e.stopPropagation();
+        if (!confirm("¿Estás seguro de que quieres eliminar esta evaluación?")) return;
+        try {
+            await sequenceDbService.deleteAssessment(id);
+            loadData();
+        } catch (error) {
+            alert("Error al eliminar");
+        }
+    };
+
     const handleInputChange = (e) => {
+
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
     };
@@ -392,11 +447,41 @@ const AssessmentGenerator = ({ isSidebarOpen, setIsSidebarOpen, session }) => {
                         <button
                             onClick={generateAssessment}
                             disabled={isGenerating || !formData.subject || !formData.topic}
-                            className={`w-full py-4 rounded-[2rem] font-black text-sm uppercase tracking-widest transition-all transform active:scale-95 flex items-center justify-center space-x-3 shadow-xl ${isGenerating ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-slate-900 hover:bg-slate-800:bg-brand-500 text-white shadow-brand-500/20 shadow-lg'}`}
+                            className={`w-full py-4 rounded-[2rem] font-black text-sm uppercase tracking-widest transition-all transform active:scale-95 flex items-center justify-center space-x-3 shadow-xl ${isGenerating ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-slate-900 hover:bg-slate-800 text-white shadow-brand-500/20 shadow-lg'}`}
                         >
                             {isGenerating ? <Loader2 className="animate-spin" size={20} /> : <Sparkles size={20} />}
                             <span>{isGenerating ? 'Vinculando Fuentes...' : 'Generar con Contexto'}</span>
                         </button>
+
+                        {/* Historial de Evaluaciones */}
+                        <div className="space-y-3 pt-6 border-t border-slate-100">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1 flex items-center justify-between">
+                                <span>Historial de Evaluaciones</span>
+                                <span className="bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded-md text-[8px]">{savedAssessments.length}</span>
+                            </label>
+                            <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto p-2 border border-slate-200 bg-slate-50/50 rounded-2xl custom-scrollbar">
+                                {savedAssessments.length > 0 ? savedAssessments.map(item => (
+                                    <button
+                                        key={item.id}
+                                        onClick={() => handleLoadSavedAssessment(item)}
+                                        className="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-white hover:border-purple-300 transition-all text-left group"
+                                    >
+                                        <div className="flex flex-col min-w-0">
+                                            <span className="text-[10px] font-bold truncate pr-6 uppercase tracking-tight text-slate-700">{item.topic}</span>
+                                            <span className="text-[8px] text-slate-400 font-medium">{item.subject} • {new Date(item.created_at).toLocaleDateString()}</span>
+                                        </div>
+                                        <button
+                                            onClick={(e) => handleDeleteAssessment(e, item.id)}
+                                            className="p-1.5 hover:bg-rose-50 text-slate-300 hover:text-rose-500 rounded-lg transition-colors"
+                                        >
+                                            <Trash2 size={12} />
+                                        </button>
+                                    </button>
+                                )) : (
+                                    <p className="text-[10px] text-slate-400 italic p-4 text-center">No has guardado evaluaciones aún</p>
+                                )}
+                            </div>
+                        </div>
                     </div>
                 </div>
             </aside>
@@ -416,6 +501,13 @@ const AssessmentGenerator = ({ isSidebarOpen, setIsSidebarOpen, session }) => {
 
                     {result && (
                         <div className="flex items-center space-x-2">
+                            <ToolbarButton
+                                onClick={handleSaveToCloud}
+                                icon={isSaving ? <Loader2 size={15} className="animate-spin" /> : <CloudUpload size={15} />}
+                                label={isSaving ? "Guardando..." : "Guardar en la Nube"}
+                                disabled={isSaving}
+                            />
+                            <div className="w-px h-5 bg-slate-200 mx-1" />
                             <ToolbarButton onClick={downloadWord} icon={<FileOutput size={15} />} label="Word" />
                             <div className="w-px h-5 bg-slate-200 mx-1" />
                             <ToolbarButton onClick={downloadPDF} icon={<FileDown size={15} />} label="PDF" highlighted />
