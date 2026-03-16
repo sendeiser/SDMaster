@@ -2,33 +2,50 @@ import { supabase } from './supabaseClient';
 
 export const sequenceDbService = {
     /**
-     * Guarda o actualiza una secuencia en la base de datos
+     * Guarda o ACTUALIZA una secuencia.
+     * Si se pasa un `id`, actualiza ese registro. Si no, crea uno nuevo.
      */
-    async saveSequence({ subject, year, topic, duration, structure, content, theme }, isPublic = false) {
+    async saveSequence({ id, subject, year, topic, duration, structure, content, theme }, isPublic = false) {
         try {
             const { data: { user } } = await supabase.auth.getUser();
-            if (!user) {
-                throw new Error('Usuario no autenticado');
+            if (!user) throw new Error('Usuario no autenticado');
+
+            const record = {
+                user_id: user.id,
+                subject,
+                year,
+                topic,
+                content,
+                theme: theme || 'classic',
+                is_public: isPublic,
+                updated_at: new Date().toISOString(),
+            };
+
+            let result;
+
+            if (id) {
+                // Actualizar registro existente
+                const { data, error } = await supabase
+                    .from('saved_sequences')
+                    .update(record)
+                    .eq('id', id)
+                    .eq('user_id', user.id) // seguridad: solo el dueño
+                    .select()
+                    .single();
+                if (error) throw error;
+                result = data;
+            } else {
+                // Crear nuevo
+                const { data, error } = await supabase
+                    .from('saved_sequences')
+                    .insert([record])
+                    .select()
+                    .single();
+                if (error) throw error;
+                result = data;
             }
 
-            const { data, error } = await supabase
-                .from('saved_sequences')
-                .insert([
-                    {
-                        user_id: user.id,
-                        subject,
-                        year,
-                        topic,
-                        content,
-                        theme: theme || 'classic',
-                        is_public: isPublic
-                    }
-                ])
-                .select()
-                .single();
-
-            if (error) throw error;
-            return { success: true, data };
+            return { success: true, data: result };
         } catch (error) {
             console.error('Error guardando secuencia:', error);
             throw error;
@@ -53,7 +70,7 @@ export const sequenceDbService = {
             return data;
         } catch (error) {
             console.error('Error obteniendo secuencias del usuario:', error);
-            throw error;
+            return [];
         }
     },
 
@@ -76,7 +93,7 @@ export const sequenceDbService = {
             return data;
         } catch (error) {
             console.error('Error obteniendo secuencias públicas:', error);
-            throw error;
+            return [];
         }
     },
 
@@ -143,22 +160,16 @@ export const sequenceDbService = {
 
             const fileExt = file.name.split('.').pop();
             const fileName = `${user.id}/avatar.${fileExt}`;
-            const filePath = `${fileName}`;
 
-            // Subir archivo (con upsert para reemplazar el anterior)
             const { error: uploadError } = await supabase.storage
                 .from('profiles')
-                .upload(filePath, file, {
-                    upsert: true,
-                    cacheControl: '3600'
-                });
+                .upload(fileName, file, { upsert: true, cacheControl: '3600' });
 
             if (uploadError) throw uploadError;
 
-            // Obtener URL pública
             const { data: { publicUrl } } = supabase.storage
                 .from('profiles')
-                .getPublicUrl(filePath);
+                .getPublicUrl(fileName);
 
             return publicUrl;
         } catch (error) {
@@ -182,7 +193,7 @@ export const sequenceDbService = {
             if (error) throw error;
             return data;
         } catch (error) {
-            console.error('Error actualizando visibilidad de la secuencia:', error);
+            console.error('Error actualizando visibilidad:', error);
             throw error;
         }
     },
@@ -209,30 +220,52 @@ export const sequenceDbService = {
      * ————— Evaluaciones —————
      */
 
-    async saveAssessment({ subject, year, topic, type, difficulty, content, theme }) {
+    /**
+     * Guarda o ACTUALIZA una evaluación.
+     * Si se pasa un `id`, actualiza. Si no, crea una nueva.
+     */
+    async saveAssessment({ id, subject, year, topic, type, difficulty, content, theme }) {
         try {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error('Usuario no autenticado');
 
-            const { data, error } = await supabase
-                .from('saved_assessments')
-                .insert([
-                    {
-                        user_id: user.id,
-                        subject,
-                        year,
-                        topic,
-                        type,
-                        difficulty,
-                        content,
-                        theme: theme || 'midnight'
-                    }
-                ])
-                .select()
-                .single();
+            const record = {
+                user_id: user.id,
+                subject,
+                year,
+                topic,
+                type,
+                difficulty,
+                content,
+                theme: theme || 'academic',
+                updated_at: new Date().toISOString(),
+            };
 
-            if (error) throw error;
-            return { success: true, data };
+            let result;
+
+            if (id) {
+                // Actualizar registro existente
+                const { data, error } = await supabase
+                    .from('saved_assessments')
+                    .update(record)
+                    .eq('id', id)
+                    .eq('user_id', user.id)
+                    .select()
+                    .single();
+                if (error) throw error;
+                result = data;
+            } else {
+                // Crear nuevo
+                const { data, error } = await supabase
+                    .from('saved_assessments')
+                    .insert([record])
+                    .select()
+                    .single();
+                if (error) throw error;
+                result = data;
+            }
+
+            return { success: true, data: result };
         } catch (error) {
             console.error('Error guardando evaluación:', error);
             throw error;
@@ -242,7 +275,7 @@ export const sequenceDbService = {
     async getUserAssessments() {
         try {
             const { data: { user } } = await supabase.auth.getUser();
-            if (!user) throw new Error('Usuario no autenticado');
+            if (!user) return [];
 
             const { data, error } = await supabase
                 .from('saved_assessments')
@@ -250,11 +283,18 @@ export const sequenceDbService = {
                 .eq('user_id', user.id)
                 .order('created_at', { ascending: false });
 
-            if (error) throw error;
+            if (error) {
+                // Si la tabla no existe, retornar vacío sin explotar
+                if (error.message?.includes('schema cache') || error.code === '42P01') {
+                    console.warn('Tabla saved_assessments no encontrada. Ejecutá supabase_create_assessments.sql');
+                    return [];
+                }
+                throw error;
+            }
             return data;
         } catch (error) {
             console.error('Error obteniendo evaluaciones:', error);
-            throw error;
+            return [];
         }
     },
 
@@ -273,4 +313,3 @@ export const sequenceDbService = {
         }
     }
 };
-

@@ -89,6 +89,7 @@ const SequenceGenerator = ({ isSidebarOpen, setIsSidebarOpen, session, loadedSeq
     const [showSaveModal, setShowSaveModal] = useState(false);
     const [notification, setNotification] = useState(null);
     const [isDocsOpen, setIsDocsOpen] = useState(false);
+    const [loadedId, setLoadedId] = useState(null);
 
     // ── Efectos ──
     useEffect(() => {
@@ -126,6 +127,7 @@ const SequenceGenerator = ({ isSidebarOpen, setIsSidebarOpen, session, loadedSeq
         });
         setResult(loadedSequence.content || '');
         setEditContent(loadedSequence.content || '');
+        setLoadedId(loadedSequence.id || null);
         setIsEditing(false);
         if (clearLoadedSequence) clearLoadedSequence();
     }, [loadedSequence, clearLoadedSequence]);
@@ -152,6 +154,7 @@ const SequenceGenerator = ({ isSidebarOpen, setIsSidebarOpen, session, loadedSeq
         setIsGenerating(true);
         setResult(null);
         setIsEditing(false);
+        setLoadedId(null);
 
         try {
             const data = await antigravityService.generateSequence({ ...formData, selectedDocs, selectedCategories });
@@ -215,11 +218,14 @@ const SequenceGenerator = ({ isSidebarOpen, setIsSidebarOpen, session, loadedSeq
         setShowSaveModal(false);
         try {
             const finalContent = isEditing ? editContent : result;
-            await sequenceDbService.saveSequence({
+            const res = await sequenceDbService.saveSequence({
                 subject: formData.subject, year: formData.year, topic: formData.topic,
                 duration: formData.duration, structure: formData.structure,
-                theme: 'academic', content: finalContent,
+                theme: 'academic', content: finalContent, id: loadedId
             }, isPublic);
+            if (!loadedId && res.data?.id) {
+                setLoadedId(res.data.id);
+            }
             showNotif('success', '¡Guardado!', `Secuencia guardada como ${isPublic ? 'Pública' : 'Privada'}.`, 4000);
         } catch (err) {
             showNotif('error', 'Error al Guardar', err.message || 'No se pudo guardar.');
@@ -230,6 +236,7 @@ const SequenceGenerator = ({ isSidebarOpen, setIsSidebarOpen, session, loadedSeq
         setFormData(item.params);
         setResult(item.content);
         setEditContent(item.content);
+        setLoadedId(item.id || null);
         setIsEditing(false);
         setShowHistory(false);
     };

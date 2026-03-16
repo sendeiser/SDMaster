@@ -100,6 +100,7 @@ const AssessmentGenerator = ({ isSidebarOpen, setIsSidebarOpen, session }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [editContent, setEditContent] = useState('');
 
+    const [loadedId, setLoadedId] = useState(null);
     const [notification, setNotification] = useState(null);
 
     useEffect(() => { loadData(); }, []);
@@ -147,6 +148,7 @@ const AssessmentGenerator = ({ isSidebarOpen, setIsSidebarOpen, session }) => {
         setIsGenerating(true);
         setResult(null);
         setIsEditing(false);
+        setLoadedId(null);
 
         try {
             const sequencesContext = userSequences
@@ -224,8 +226,15 @@ const AssessmentGenerator = ({ isSidebarOpen, setIsSidebarOpen, session }) => {
         setIsSaving(true);
         try {
             const contentToSave = isEditing ? editContent : result;
-            const res = await sequenceDbService.saveAssessment({ ...formData, content: contentToSave });
+            const res = await sequenceDbService.saveAssessment({ 
+                ...formData, 
+                content: contentToSave,
+                id: loadedId 
+            });
             if (res.success) {
+                if (!loadedId && res.data?.id) {
+                    setLoadedId(res.data.id);
+                }
                 showNotif('success', '¡Guardado!', 'La evaluación fue guardada en la nube.', 4000);
                 loadData();
             }
@@ -247,6 +256,7 @@ const AssessmentGenerator = ({ isSidebarOpen, setIsSidebarOpen, session }) => {
         });
         setResult(item.content || '');
         setEditContent(item.content || '');
+        setLoadedId(item.id);
         setIsEditing(false);
     };
 
