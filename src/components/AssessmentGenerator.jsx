@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Sparkles, BookType, Calendar, Clock, Loader2, Copy, Check, ArrowRight, FileDown, History, Trash2, ChevronRight, FileText, Video, Edit3, Eye, FileOutput, MessageSquare, Database, CloudUpload, Lock, Globe, ListCheck, ClipboardCheck, GraduationCap } from 'lucide-react';
 import { saveAs } from 'file-saver';
 import ReactMarkdown from 'react-markdown';
@@ -12,6 +12,7 @@ import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import rehypeRaw from 'rehype-raw';
 import 'katex/dist/katex.min.css';
+import { markdownToExportHtml, buildWordHtml } from '../utils/exportUtils';
 import RichEditor from './RichEditor';
 import { marked } from 'marked';
 import TurndownService from 'turndown';
@@ -227,108 +228,106 @@ const AssessmentGenerator = ({ isSidebarOpen, setIsSidebarOpen, session }) => {
         }
     };
 
+    // ── downloadPDF ───────────────────────────────────────────────────────────────
     const downloadPDF = async () => {
         const element = resultRef.current;
         if (!element || !result) {
-            alert("No hay contenido para exportar. Por favor genera una evaluación primero.");
+            alert('No hay contenido para exportar. Genera una evaluación primero.');
             return;
         }
-
         setIsGenerating(true);
         try {
+            const { jsPDF } = await import('jspdf');
+            const { default: html2canvas } = await import('html2canvas');
+
             const canvas = await html2canvas(element, {
                 scale: 2,
                 useCORS: true,
                 logging: false,
                 backgroundColor: '#ffffff',
-                scrollY: -window.scrollY,
+                windowWidth: 900,
                 onclone: (clonedDoc) => {
-                    const clonedEl = clonedDoc.getElementById('pdf-content');
-                    if (clonedEl) {
-                        // Expandir el elemento para capturar TODO el contenido
-                        clonedEl.style.maxHeight = 'none';
-                        clonedEl.style.overflow = 'visible';
-                        clonedEl.style.padding = '40px';
-                        clonedEl.style.width = '800px';
-                        clonedEl.style.transform = 'none';
-                        clonedEl.style.boxShadow = 'none';
-
-                        // Convertir colores oklch (Tailwind 4) a colores HEX compatibles con html2canvas
-                        const allEls = clonedEl.querySelectorAll('*');
-                        allEls.forEach(el => {
-                            const computed = window.getComputedStyle(el);
-                            if (computed.color.includes('oklch')) el.style.color = '#1e293b';
-                            if (computed.backgroundColor.includes('oklch')) el.style.backgroundColor = 'transparent';
-                            if (computed.borderColor.includes('oklch')) el.style.borderColor = '#e2e8f0';
-                        });
-                    }
-                }
+                    const el = clonedDoc.getElementById('pdf-content');
+                    if (!el) return;
+                    el.style.cssText = `
+                        max-height: none !important;
+                        overflow: visible !important;
+                        padding: 48px 64px !important;
+                        width: 820px !important;
+                        box-shadow: none !important;
+                        border: none !important;
+                    `;
+                    // Normalizar colores oklch que html2canvas no soporta
+                    el.querySelectorAll('*').forEach(node => {
+                        const s = window.getComputedStyle(node);
+                        if (s.color?.includes('oklch')) node.style.color = '#1e293b';
+                        if (s.backgroundColor?.includes('oklch')) node.style.backgroundColor = 'transparent';
+                        if (s.borderColor?.includes('oklch')) node.style.borderColor = '#e2e8f0';
+                    });
+                },
             });
 
-            const imgData = canvas.toDataURL('image/png');
             const pdf = new jsPDF('p', 'mm', 'a4');
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = pdf.internal.pageSize.getHeight();
-            const imgWidth = pdfWidth;
-            const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+            const pageW = pdf.internal.pageSize.getWidth();
+            const pageH = pdf.internal.pageSize.getHeight();
+            const imgRatio = canvas.height / canvas.width;
+            const imgWidthMm = pageW - 20; // 10mm margen cada lado
+            const imgHeightMm = imgWidthMm * imgRatio;
 
-            let heightLeft = imgHeight;
-            let position = 0;
+            let yOffset = 0;
+            let page = 0;
 
-            // Primera página
-            pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-            heightLeft -= pdfHeight;
+            while (yOffset < canvas.height) {
+                if (page > 0) pdf.addPage();
 
-            // Páginas adicionales mientras quede contenido
-            while (heightLeft > 0) {
-                position = heightLeft - imgHeight;
-                pdf.addPage();
-                pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-                heightLeft -= pdfHeight;
+                // Crear un canvas temporal con sólo la porción de esta página
+                const pageCanvas = document.createElement('canvas');
+                const pxPerMm = canvas.width / imgWidthMm;
+                const sliceH = Math.round(pageH * pxPerMm);
+                pageCanvas.width = canvas.width;
+                pageCanvas.height = Math.min(sliceH, canvas.height - yOffset);
+
+                const ctx = pageCanvas.getContext('2d');
+                ctx.drawImage(canvas, 0, yOffset, canvas.width, pageCanvas.height, 0, 0, canvas.width, pageCanvas.height);
+
+                const imgData = pageCanvas.toDataURL('image/jpeg', 0.95);
+                const sliceHeightMm = (pageCanvas.height / canvas.width) * imgWidthMm;
+                pdf.addImage(imgData, 'JPEG', 10, 10, imgWidthMm, sliceHeightMm);
+
+                yOffset += sliceH;
+                page++;
             }
 
-            const fileName = `Evaluacion_${(formData.topic || 'Sin_Tema').replace(/\s+/g, '_')}.pdf`;
-            pdf.save(fileName);
-        } catch (error) {
-            console.error("Error al exportar PDF:", error);
-            alert("Hubo un error al generar el PDF.");
+            pdf.save(`Evaluacion_${(formData.topic || 'Sin_Tema').replace(/\s+/g, '_')}.pdf`);
+        } catch (err) {
+            console.error('Error generando PDF:', err);
+            alert('Error al generar el PDF.');
         } finally {
             setIsGenerating(false);
         }
     };
 
+    // ── downloadWord ──────────────────────────────────────────────────────────────
     const downloadWord = async () => {
         if (!result) return;
         setIsGenerating(true);
         try {
-            const contentToExport = isEditing ? turndownService.turndown(editableContent) : result;
-            const htmlFromMd = marked.parse(contentToExport);
+            const contentToExport = isEditing
+                ? turndownService.turndown(editableContent)
+                : result;
 
-            const htmlContent = `
-                <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-                <head><meta charset='utf-8'><title>Evaluación</title>
-                <style>
-                    body { font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; padding: 50px; }
-                    h1 { color: #1e293b; font-size: 24pt; border-bottom: 2px solid #3b82f6; padding-bottom: 10px; }
-                    h2 { color: #334155; font-size: 18pt; margin-top: 30px; }
-                    table { border-collapse: collapse; width: 100%; margin: 20px 0; }
-                    th, td { border: 1px solid #cbd5e1; padding: 10px; text-align: left; }
-                    th { background-color: #f8fafc; font-weight: bold; }
-                </style>
-                </head>
-                <body>
-                    <div style="text-align: right; font-size: 10pt; color: #64748b; margin-bottom: 30px;">
-                        ${formData.subject} | ${formData.year}<br>
-                        Generado el ${new Date().toLocaleDateString()}
-                    </div>
-                    ${htmlFromMd}
-                </body>
-                </html>
-            `;
-            const blob = new Blob(['\ufeff', htmlContent], { type: 'application/msword' });
-            saveAs(blob, `Evaluacion_${formData.topic.replace(/\s+/g, '_')}.doc`);
+            const htmlContent = markdownToExportHtml(contentToExport);
+            const fullHtml = buildWordHtml(htmlContent, {
+                subject: formData.subject,
+                year: formData.year,
+                topic: formData.topic,
+            });
+
+            const blob = new Blob(['\ufeff', fullHtml], { type: 'application/msword' });
+            saveAs(blob, `Evaluacion_${(formData.topic || 'Sin_Tema').replace(/\s+/g, '_')}.doc`);
         } catch (e) {
-            console.error(e);
+            console.error('Error exportando Word:', e);
+            alert('Error al generar el archivo Word.');
         } finally {
             setIsGenerating(false);
         }

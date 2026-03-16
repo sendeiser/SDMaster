@@ -12,6 +12,7 @@ import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import rehypeRaw from 'rehype-raw';
 import 'katex/dist/katex.min.css';
+import { markdownToExportHtml, buildWordHtml } from '../utils/exportUtils';
 import RichEditor, { mdComponents as richMdComponents } from './RichEditor';
 import { marked } from 'marked';
 import TurndownService from 'turndown';
@@ -123,12 +124,9 @@ const SequenceGenerator = ({ isSidebarOpen, setIsSidebarOpen, session, loadedSeq
     const [isDocsOpen, setIsDocsOpen] = useState(false);
     const [fontFamily, setFontFamily] = useState("'Inter', sans-serif");
 
+    // Estados para Guardado en Nube
     const [isSavingCloud, setIsSavingCloud] = useState(false);
     const [showSaveModal, setShowSaveModal] = useState(false);
-
-    // Estados para Paginación y Selección
-    const [selectedPages, setSelectedPages] = useState([]); // Array de índices de páginas seleccionadas
-    const [pages, setPages] = useState([]); // Array de strings (contenido de cada página)
 
     // Listen for font changes from RichEditor
     useEffect(() => {
@@ -137,6 +135,7 @@ const SequenceGenerator = ({ isSidebarOpen, setIsSidebarOpen, session, loadedSeq
         return () => document.removeEventListener('editor-font-change', handler);
     }, []);
 
+    // Effect to automatically load a sequence when redirected from Community / My Sequences
     useEffect(() => {
         if (loadedSequence) {
             setFormData({
@@ -150,21 +149,19 @@ const SequenceGenerator = ({ isSidebarOpen, setIsSidebarOpen, session, loadedSeq
                 includeMedia: true,
                 suggestions: ''
             });
+            setResult(loadedSequence.content || '');
 
-            const content = loadedSequence.content || '';
-            setResult(content);
-            const splitPages = content.split(/\n---\n|\n---\r\n|<hr\s*\/?>/i).filter(p => p.trim().length > 0);
-            setPages(splitPages.length > 0 ? splitPages : [content]);
-            setSelectedPages((splitPages.length > 0 ? splitPages : [content]).map((_, i) => i)); // Todas seleccionadas por defecto
-
+            // Switch to preview mode to show the exact design
             setIsEditing(false);
 
+            // Si está en modo WYSIWYG internamente igual actualizamos el contenido por si luego lo abren
             try {
-                setEditableContent(marked.parse(content));
+                setEditableContent(marked.parse(loadedSequence.content || ''));
             } catch (e) {
                 console.error(e);
             }
 
+            // Limpia el flag para no volver a cargar
             if (clearLoadedSequence) clearLoadedSequence();
         }
     }, [loadedSequence, clearLoadedSequence]);
@@ -242,13 +239,6 @@ const SequenceGenerator = ({ isSidebarOpen, setIsSidebarOpen, session, loadedSeq
             });
             const newResult = data.content;
             setResult(newResult);
-
-            // Paginación automática al generar
-            const splitPages = newResult.split(/\n---\n|\n---\r\n|<hr\s*\/?>/i).filter(p => p.trim().length > 0);
-            const finalPages = splitPages.length > 0 ? splitPages : [newResult];
-            setPages(finalPages);
-            setSelectedPages(finalPages.map((_, i) => i));
-
             setEditableContent(newResult);
             setIsEditing(false);
 
@@ -291,66 +281,6 @@ const SequenceGenerator = ({ isSidebarOpen, setIsSidebarOpen, session, loadedSeq
     };
 
     const downloadPDF = async () => {
-        if (selectedPages.length === 0) {
-            alert("Selecciona al menos una página para exportar.");
-            return;
-        }
-
-        setIsGenerating(true);
-        try {
-            const pdf = new jsPDF('p', 'mm', 'a4');
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = pdf.internal.pageSize.getHeight();
-
-            for (let i = 0; i < selectedPages.length; i++) {
-                const pageIdx = selectedPages[i];
-                const element = document.getElementById(`page-content-${pageIdx}`);
-
-                if (!element) continue;
-
-                const canvas = await html2canvas(element, {
-                    scale: 2,
-                    useCORS: true,
-                    logging: false,
-                    backgroundColor: '#ffffff',
-                    onclone: (clonedDoc) => {
-                        const clonedEl = clonedDoc.getElementById(`page-content-${pageIdx}`);
-                        if (clonedEl) {
-                            clonedEl.style.padding = '40px';
-                            clonedEl.style.width = '800px';
-                            // Eliminar el checkbox de la clonación
-                            const checkbox = clonedEl.querySelector('.page-selector-overlay');
-                            if (checkbox) checkbox.remove();
-
-                            const allDocs = clonedEl.querySelectorAll('*');
-                            allDocs.forEach(el => {
-                                const computed = clonedDoc.defaultView.getComputedStyle(el);
-                                if (computed.color.includes('oklch')) el.style.color = '#1e293b';
-                                if (computed.backgroundColor.includes('oklch')) el.style.backgroundColor = 'transparent';
-                                if (computed.borderColor.includes('oklch')) el.style.borderColor = '#e2e8f0';
-                            });
-                        }
-                    }
-                });
-
-                const imgData = canvas.toDataURL('image/png');
-                const imgHeight = (canvas.height * pdfWidth) / canvas.width;
-
-                if (i > 0) pdf.addPage();
-                pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, imgHeight);
-            }
-
-            const fileName = `Secuencia_${(formData.topic || 'Sin_Tema').replace(/\s+/g, '_')}.pdf`;
-            pdf.save(fileName);
-        } catch (error) {
-            console.error("Error downloading PDF:", error);
-            alert("Hubo un error al generar el PDF.");
-        } finally {
-            setIsGenerating(false);
-        }
-    };
-
-    const downloadWord = async () => {
         const element = resultRef.current;
         if (!element || !result) {
             alert("No hay contenido para exportar. Por favor genera una secuencia primero.");
@@ -359,35 +289,98 @@ const SequenceGenerator = ({ isSidebarOpen, setIsSidebarOpen, session, loadedSeq
 
         setIsGenerating(true);
         try {
-            // Usamos el contenido renderizado para mantener el formato de tablas y estilos
-            const contentHtml = element.innerHTML;
+            // Aseguramos que el elemento sea visible y esté bien renderizado
+            const canvas = await html2canvas(element, {
+                scale: 2,
+                useCORS: true,
+                logging: false,
+                backgroundColor: '#ffffff',
+                windowWidth: 900,
+                onclone: (clonedDoc) => {
+                    const clonedEl = clonedDoc.getElementById('pdf-content');
+                    if (clonedEl) {
+                        clonedEl.style.maxHeight = 'none';
+                        clonedEl.style.overflow = 'visible';
+                        clonedEl.style.padding = '48px 64px';
+                        clonedEl.style.width = '820px';
+                        clonedEl.style.boxShadow = 'none';
+                        clonedEl.style.border = 'none';
 
-            const htmlContent = `
-                <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-                <head>
-                    <meta charset='utf-8'>
-                    <title>Secuencia Didáctica - SD Master</title>
-                    <style>
-                        body { font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; padding: 40px; }
-                        h1 { color: #0ea5e9; border-bottom: 2px solid #0ea5e9; padding-bottom: 5px; font-size: 24pt; }
-                        h2 { color: #1e293b; border-left: 5px solid #0ea5e9; padding-left: 10px; margin-top: 20px; font-size: 18pt; }
-                        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-                        th, td { border: 1px solid #cbd5e1; padding: 10px; text-align: left; font-size: 11pt; }
-                        th { background-color: #f8fafc; font-weight: bold; }
-                        p { margin-bottom: 10pt; }
-                        .footer { font-size: 9pt; color: #94a3b8; text-align: center; margin-top: 50px; border-top: 1px solid #e2e8f0; padding-top: 10px; }
-                    </style>
-                </head>
-                <body>
-                    ${contentHtml}
-                    <div style="margin-top: 50px; border-top: 1px solid #eee; padding-top: 20px; text-align: center; color: #999; font-size: 9pt;">
-                        Documento de Planificación Docente • Página 1
-                    </div>
-                </body>
-                </html>
-            `;
+                        // LIMPIEZA CRÍTICA: html2canvas NO soporta oklch de Tailwind 4
+                        const allDocs = clonedEl.querySelectorAll('*');
+                        allDocs.forEach(el => {
+                            const computed = window.getComputedStyle(el);
+                            // Convertir colores oklch detectados a fallbacks HEX/RGB
+                            if (computed.color?.includes('oklch')) el.style.color = '#1e293b';
+                            if (computed.backgroundColor?.includes('oklch')) el.style.backgroundColor = 'transparent';
+                            if (computed.borderColor?.includes('oklch')) el.style.borderColor = '#e2e8f0';
+                        });
+                    }
+                }
+            });
 
-            const blob = new Blob(['\ufeff', htmlContent], {
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const pageW = pdf.internal.pageSize.getWidth();
+            const pageH = pdf.internal.pageSize.getHeight();
+            const imgRatio = canvas.height / canvas.width;
+            const imgWidthMm = pageW - 20; // 10mm margen cada lado
+            const imgHeightMm = imgWidthMm * imgRatio;
+
+            let yOffset = 0;
+            let page = 0;
+
+            while (yOffset < canvas.height) {
+                if (page > 0) pdf.addPage();
+
+                // Crear un canvas temporal con sólo la porción de esta página
+                const pageCanvas = document.createElement('canvas');
+                const pxPerMm = canvas.width / imgWidthMm;
+                const sliceH = Math.round(pageH * pxPerMm);
+                pageCanvas.width = canvas.width;
+                pageCanvas.height = Math.min(sliceH, canvas.height - yOffset);
+
+                const ctx = pageCanvas.getContext('2d');
+                ctx.drawImage(canvas, 0, yOffset, canvas.width, pageCanvas.height, 0, 0, canvas.width, pageCanvas.height);
+
+                const imgData = pageCanvas.toDataURL('image/jpeg', 0.95);
+                const sliceHeightMm = (pageCanvas.height / canvas.width) * imgWidthMm;
+                pdf.addImage(imgData, 'JPEG', 10, 10, imgWidthMm, sliceHeightMm);
+
+                yOffset += sliceH;
+                page++;
+            }
+
+            const fileName = `Secuencia_${(formData.topic || 'Sin_Tema').replace(/\s+/g, '_')}.pdf`;
+            pdf.save(fileName);
+        } catch (error) {
+            console.error("Error downloading PDF:", error);
+            alert("Hubo un error al generar el PDF. El contenido puede ser demasiado grande.");
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
+    const downloadWord = async () => {
+        if (!result) {
+            alert("No hay contenido para exportar. Por favor genera una secuencia primero.");
+            return;
+        }
+
+        setIsGenerating(true);
+        try {
+            let contentToExport = result;
+            if (isEditing) {
+                contentToExport = turndownService.turndown(editableContent);
+            }
+
+            const htmlContent = markdownToExportHtml(contentToExport);
+            const fullHtml = buildWordHtml(htmlContent, {
+                subject: formData.subject,
+                year: formData.year,
+                topic: formData.topic,
+            });
+
+            const blob = new Blob(['\ufeff', fullHtml], {
                 type: 'application/msword'
             });
 
@@ -541,11 +534,6 @@ const SequenceGenerator = ({ isSidebarOpen, setIsSidebarOpen, session, loadedSeq
     const loadFromHistory = (item) => {
         setFormData(item.params);
         setResult(item.content);
-        const splitPages = item.content.split(/\n---\n|\n---\r\n|<hr\s*\/?>/i).filter(p => p.trim().length > 0);
-        const finalPages = splitPages.length > 0 ? splitPages : [item.content];
-        setPages(finalPages);
-        setSelectedPages(finalPages.map((_, i) => i));
-
         setEditableContent(item.content); // Also load into editable content
         setIsEditing(false); // Ensure not in edit mode when loading from history
         setShowHistory(false);
@@ -946,55 +934,37 @@ const SequenceGenerator = ({ isSidebarOpen, setIsSidebarOpen, session, loadedSeq
                                     fontFamily={fontFamily}
                                 />
                             ) : (
-                                <div className="space-y-8 pb-20">
-                                    {pages.map((pageContent, idx) => (
-                                        <div
-                                            key={idx}
-                                            id={`page-content-${idx}`}
-                                            className={`relative group transition-all duration-500 ${(THEMES_CONFIG[formData.theme] || THEMES_CONFIG.classic).containerClass || "px-8 md:px-16 py-12 shadow-[0_10px_30px_rgba(0,0,0,0.05)]"} bg-white border border-slate-100 min-h-[1056px] w-full max-w-[800px] mx-auto overflow-hidden`}
-                                            style={{ fontFamily: fontFamily }}
-                                        >
-                                            {/* Selector de Página (UI solamente) */}
-                                            <div className="absolute top-4 right-4 z-20 page-selector-overlay no-print">
-                                                <button
-                                                    onClick={() => {
-                                                        setSelectedPages(prev =>
-                                                            prev.includes(idx) ? prev.filter(p => p !== idx) : [...prev, idx]
-                                                        );
-                                                    }}
-                                                    className={`w-8 h-8 rounded-full flex items-center justify-center transition-all border-2 ${selectedPages.includes(idx) ? 'bg-brand-600 border-brand-600 text-white' : 'bg-white border-slate-200 text-slate-300'}`}
-                                                >
-                                                    {selectedPages.includes(idx) ? <Check size={16} strokeWidth={3} /> : <div className="w-2 h-2 bg-slate-200 rounded-full" />}
-                                                </button>
-                                            </div>
-
-                                            {/* Membrete - Solo en la primera página o en todas */}
-                                            <div className="flex justify-between items-start border-b-2 border-slate-900 pb-6 mb-10">
-                                                <div className="text-left">
-                                                    <p className="text-lg font-black text-slate-900 uppercase tracking-tighter leading-none">{formData.subject}</p>
-                                                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">{formData.topic}</p>
-                                                </div>
-                                                <div className="text-right">
-                                                    <p className="text-[10px] font-black text-slate-800 uppercase tracking-widest">{formData.year}</p>
-                                                    <p className="text-[9px] font-bold text-slate-400 uppercase mt-0.5">{new Date().toLocaleDateString()}</p>
-                                                </div>
-                                            </div>
-
-                                            <ReactMarkdown
-                                                remarkPlugins={[remarkGfm, remarkMath]}
-                                                rehypePlugins={[rehypeKatex, rehypeRaw]}
-                                                components={getMarkdownComponents(formData.theme)}
-                                            >
-                                                {pageContent}
-                                            </ReactMarkdown>
-
-                                            {/* Footer Profesional */}
-                                            <div className="absolute bottom-12 left-8 right-8 pt-8 border-t-2 border-slate-900 flex justify-between items-center text-[10px] font-black uppercase tracking-[0.2em] text-slate-900">
-                                                <span>Documento de Planificación Docente</span>
-                                                <span>Página {idx + 1} de {pages.length}</span>
-                                            </div>
+                                <div
+                                    ref={resultRef}
+                                    id="pdf-content"
+                                    className={`${(THEMES_CONFIG[formData.theme] || THEMES_CONFIG.classic).containerClass || "px-10 md:px-20 py-16 shadow-[0_20px_50px_rgba(0,0,0,0.1)]"} bg-white border border-slate-100 min-h-[1056px] relative overflow-hidden break-words transition-all duration-500`}
+                                    style={{ fontFamily: fontFamily }}
+                                >
+                                    {/* Membrete Minimalista Profesional (Sin marca de agua) */}
+                                    <div className="flex justify-between items-start border-b-2 border-slate-900 pb-6 mb-10">
+                                        <div className="text-left">
+                                            <p className="text-lg font-black text-slate-900 uppercase tracking-tighter leading-none">{formData.subject}</p>
+                                            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">{formData.topic}</p>
                                         </div>
-                                    ))}
+                                        <div className="text-right">
+                                            <p className="text-[10px] font-black text-slate-800 uppercase tracking-widest">{formData.year}</p>
+                                            <p className="text-[9px] font-bold text-slate-400 uppercase mt-0.5">{new Date().toLocaleDateString()}</p>
+                                        </div>
+                                    </div>
+
+                                    <ReactMarkdown
+                                        remarkPlugins={[remarkGfm, remarkMath]}
+                                        rehypePlugins={[rehypeKatex, rehypeRaw]}
+                                        components={getMarkdownComponents(formData.theme)}
+                                    >
+                                        {result}
+                                    </ReactMarkdown>
+
+                                    {/* Footer Profesional */}
+                                    <div className="mt-20 pt-8 border-t-2 border-slate-900 flex justify-between items-center text-[10px] font-black uppercase tracking-[0.2em] text-slate-900">
+                                        <span>Documento de Planificación Docente</span>
+                                        <span>Página 1</span>
+                                    </div>
                                 </div>
                             )}
                         </div>
