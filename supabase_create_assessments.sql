@@ -4,7 +4,7 @@
 
 CREATE TABLE IF NOT EXISTS public.saved_assessments (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+    user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
     subject TEXT,
     year TEXT,
     topic TEXT,
