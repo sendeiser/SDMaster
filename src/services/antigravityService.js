@@ -1,6 +1,28 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { SYSTEM_PROMPTS } from '../utils/prompts';
 import { ragService } from './ragService';
+import { supabase } from '../lib/supabaseClient';
+
+/**
+ * Descuenta 1 crédito del usuario autenticado.
+ * Lanza un error con type='NO_CREDITS' si no tiene saldo.
+ */
+const checkAndDeductCredit = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return; // no autenticado: dejar pasar (el resto del sistema protege)
+
+    const { data, error } = await supabase.rpc('deduct_credit', { p_user_id: user.id });
+    if (error) {
+        console.warn('Error descontando crédito:', error);
+        return; // Si falla el RPC, no bloqueamos: fail open
+    }
+    if (data === false) {
+        const err = new Error('NO_CREDITS');
+        err.type = 'NO_CREDITS';
+        err.detail = '¡Te quedaste sin créditos! Mejorá tu plan para seguir generando.';
+        throw err;
+    }
+};
 
 // Inicializar de forma segura (normalmente no haríamos esto en frontend puro en prod,
 // pero está bien para un prototipo rápido de validación).
@@ -21,6 +43,9 @@ const getAI = () => {
  */
 export const antigravityService = {
     async generateSequence(params) {
+        // 0. Verificar créditos antes de generar
+        await checkAndDeductCredit();
+
         const {
             subject, year, topic, duration,
             structure = 'Tradicional',
@@ -157,6 +182,9 @@ REQUISITOS CRÍTICOS DE CONTENIDO:
     },
 
     async generateAssessment(params) {
+        // 0. Verificar créditos antes de generar
+        await checkAndDeductCredit();
+
         const {
             subject, year, topic,
             type = 'Examen Tradicional',
@@ -236,6 +264,62 @@ REQUISITOS PEDAGÓGICOS Y ESTRUCTURALES:
             };
         } catch (error) {
             console.error("Error al generar evaluación:", error);
+            throw error;
+        }
+    },
+
+    async gradeSubmission(assignmentContent, studentResponse) {
+        if (!assignmentContent || !studentResponse) {
+            throw new Error("Se requiere la consigna original y la respuesta del alumno para corregir.");
+        }
+
+        const prompt = `
+════════════════════════════════════════════════════════
+CONSIGNA ORIGINAL DE LA TAREA/EVALUACIÓN:
+════════════════════════════════════════════════════════
+${assignmentContent}
+
+════════════════════════════════════════════════════════
+RESPUESTA DEL ESTUDIANTE:
+════════════════════════════════════════════════════════
+${studentResponse}
+`;
+
+        try {
+            const ai = getAI();
+            const model = ai.getGenerativeModel({
+                model: 'gemini-3-flash-preview',
+                systemInstruction: SYSTEM_PROMPTS.AUTOGRADER_EXPERT
+            });
+
+            // We request JSON output format from Gemini
+            const response = await model.generateContent({
+                contents: [{ role: 'user', parts: [{ text: prompt }] }],
+                generationConfig: {
+                    responseMimeType: "application/json",
+                }
+            });
+            
+            const textResponse = response.response.text();
+            
+            try {
+                // Parse the JSON response
+                const result = JSON.parse(textResponse);
+                if (result.score === undefined || !result.feedback) {
+                     throw new Error("El modelo no devolvió la estructura JSON requerida");
+                }
+                return {
+                    success: true,
+                    score: result.score,
+                    feedback: result.feedback
+                };
+            } catch (parseError) {
+                console.error("Error parseando respuesta JSON del LLM:", textResponse);
+                throw new Error("Error interno al interpretar la corrección de la IA.");
+            }
+
+        } catch (error) {
+            console.error("Error en AutoGrader:", error);
             throw error;
         }
     }

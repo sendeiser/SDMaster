@@ -63,7 +63,7 @@ const ToolbarBtn = ({ onClick, icon, label, variant = 'default', disabled = fals
 
 // ─── Componente principal ─────────────────────────────────────
 
-const SequenceGenerator = ({ isSidebarOpen, setIsSidebarOpen, session, loadedSequence, clearLoadedSequence }) => {
+const SequenceGenerator = ({ isSidebarOpen, setIsSidebarOpen, session, profile, loadedSequence, clearLoadedSequence }) => {
 
     const [formData, setFormData] = useState({
         subject: '', year: '', topic: '', duration: '',
@@ -97,12 +97,15 @@ const SequenceGenerator = ({ isSidebarOpen, setIsSidebarOpen, session, loadedSeq
         const hist = (() => { try { return JSON.parse(localStorage.getItem('sd_history') || '[]'); } catch { return []; } })();
         setFormData(prev => ({
             ...prev,
+            subject: prev.subject || prefs.defaultSubject || '',
+            year: prev.year || prefs.defaultYear || '',
+            topic: prev.topic || prefs.defaultTopic || '',
             duration: prefs.defaultDuration || '2h',
             structure: prefs.defaultStructure || 'Tradicional',
         }));
         setHistory(hist);
         loadIndexedDocs();
-    }, []);
+    }, [profile]);
 
     useEffect(() => { localStorage.setItem('sd_history', JSON.stringify(history)); }, [history]);
 
@@ -157,7 +160,12 @@ const SequenceGenerator = ({ isSidebarOpen, setIsSidebarOpen, session, loadedSeq
         setLoadedId(null);
 
         try {
-            const data = await antigravityService.generateSequence({ ...formData, selectedDocs, selectedCategories });
+            const data = await antigravityService.generateSequence({ 
+                ...formData, 
+                selectedDocs, 
+                selectedCategories,
+                defaultContext: profile?.defaultContext 
+            });
             const content = data.content;
             setResult(content);
             setEditContent(content);

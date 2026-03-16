@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { sequenceDbService } from '../lib/sequenceDbService';
-import { FolderHeart, Clock, Search, BookOpen, Loader2, Trash2, Globe, Lock, ClipboardCheck } from 'lucide-react';
+import { FolderHeart, Clock, Search, BookOpen, Loader2, Trash2, Globe, Lock, ClipboardCheck, Users, Calendar, X } from 'lucide-react';
 
 const MySequences = ({ session, onLoadSequence, onLoadAssessment }) => {
     const [activeTab, setActiveTab] = useState('secuencias'); // 'secuencias' | 'evaluaciones'
@@ -9,6 +9,14 @@ const MySequences = ({ session, onLoadSequence, onLoadAssessment }) => {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [isDeleting, setIsDeleting] = useState(null);
+
+    // Modal Asignación
+    const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+    const [itemToAssign, setItemToAssign] = useState(null);
+    const [classrooms, setClassrooms] = useState([]);
+    const [selectedClassroom, setSelectedClassroom] = useState('');
+    const [dueDate, setDueDate] = useState('');
+    const [isAssigning, setIsAssigning] = useState(false);
 
     useEffect(() => {
         if (session) {
@@ -31,6 +39,45 @@ const MySequences = ({ session, onLoadSequence, onLoadAssessment }) => {
             console.error("Error cargando repositorio:", error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const openAssignModal = async (item, e) => {
+        e.stopPropagation();
+        setItemToAssign(item);
+        setIsAssignModalOpen(true);
+        try {
+            const rooms = await sequenceDbService.getTeacherClassrooms();
+            setClassrooms(rooms || []);
+        } catch (error) {
+            console.error("Error cargando aulas:", error);
+        }
+    };
+
+    const handleAssign = async (e) => {
+        e.preventDefault();
+        if (!selectedClassroom || !itemToAssign) return;
+
+        setIsAssigning(true);
+        try {
+            const itemType = activeTab === 'secuencias' ? 'sequence' : 'assessment';
+            
+            // Format due_date to ISO if provided
+            let finalDueDate = null;
+            if (dueDate) {
+                finalDueDate = new Date(dueDate).toISOString();
+            }
+
+            await sequenceDbService.assignToClassroom(selectedClassroom, itemToAssign, itemType, finalDueDate);
+            alert(`¡Actividad "${itemToAssign.topic}" asignada con éxito al aula!`);
+            setIsAssignModalOpen(false);
+            setDueDate('');
+            setSelectedClassroom('');
+        } catch (error) {
+            alert('Error al asignar al aula: ' + error.message);
+        } finally {
+            setIsAssigning(false);
+            setItemToAssign(null);
         }
     };
 
@@ -171,21 +218,28 @@ const MySequences = ({ session, onLoadSequence, onLoadAssessment }) => {
                                     <button
                                         onClick={() => activeTab === 'secuencias' ? onLoadSequence(item) : onLoadAssessment(item)}
                                         className={`flex-grow py-2.5 bg-slate-50 hover:text-white rounded-xl text-sm font-bold transition-all flex items-center justify-center space-x-2 group-hover:shadow-md ${activeTab === 'evaluaciones' ? 'hover:bg-purple-600 text-slate-600' : 'hover:bg-brand-600 text-slate-600'}`}
+                                        title="Ver en Editor"
                                     >
                                         <BookOpen size={16} />
-                                        <span>Ver en Editor</span>
+                                    </button>
+                                    <button
+                                        title="Asignar a Aula"
+                                        onClick={(e) => openAssignModal(item, e)}
+                                        className="flex-grow py-2.5 bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-600 rounded-xl text-sm font-bold transition-all flex items-center justify-center space-x-2 group-hover:shadow-md"
+                                    >
+                                        <Users size={16} />
                                     </button>
                                     <button
                                         title={item.is_public ? "Hacer Privado" : "Hacer Público"}
                                         onClick={(e) => toggleVisibility(item.id, item.is_public, e)}
-                                        className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all ${item.is_public ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}
+                                        className={`w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-xl transition-all ${item.is_public ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}
                                     >
                                         {item.is_public ? <Globe size={16} /> : <Lock size={16} />}
                                     </button>
                                     <button
                                         title="Eliminar permanentemente"
                                         onClick={(e) => handleDelete(item.id, e)}
-                                        className="w-10 h-10 flex items-center justify-center bg-red-50 text-red-500 hover:bg-red-500 hover:text-white rounded-xl transition-all"
+                                        className="w-10 h-10 flex-shrink-0 flex items-center justify-center bg-red-50 text-red-500 hover:bg-red-500 hover:text-white rounded-xl transition-all"
                                     >
                                         {isDeleting === item.id ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
                                     </button>
@@ -201,6 +255,94 @@ const MySequences = ({ session, onLoadSequence, onLoadAssessment }) => {
                     </div>
                 )}
             </div>
+
+            {/* Modal de Asignación */}
+            {isAssignModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                        <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+                            <h2 className="text-xl font-black text-slate-800 flex items-center gap-2">
+                                <Users className="text-indigo-500" />
+                                Asignar a Aula
+                            </h2>
+                            <button
+                                onClick={() => { setIsAssignModalOpen(false); setItemToAssign(null); }}
+                                className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-2 rounded-full transition-colors"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+                        
+                        <form onSubmit={handleAssign} className="p-6 space-y-6">
+                            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">
+                                    Actividad a asignar:
+                                </span>
+                                <h3 className="font-black text-slate-800 leading-tight">
+                                    {itemToAssign?.topic || 'Sin título'}
+                                </h3>
+                                <div className="text-sm font-medium text-slate-500 mt-1">
+                                    {itemToAssign?.subject}
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-2">Seleccionar Aula</label>
+                                {classrooms.length === 0 ? (
+                                    <div className="text-sm text-amber-600 bg-amber-50 p-3 rounded-xl border border-amber-100 font-medium">
+                                        No tienes aulas creadas. Únete o crea una en la pestaña "Mis Aulas" primero.
+                                    </div>
+                                ) : (
+                                    <select
+                                        value={selectedClassroom}
+                                        onChange={(e) => setSelectedClassroom(e.target.value)}
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all font-medium text-slate-700"
+                                        required
+                                    >
+                                        <option value="">Selecciona un aula...</option>
+                                        {classrooms.map(c => (
+                                            <option key={c.id} value={c.id}>
+                                                {c.name} {c.description ? `(${c.description})` : ''}
+                                            </option>
+                                        ))}
+                                    </select>
+                                )}
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
+                                    <Calendar size={16} className="text-slate-400" />
+                                    Fecha límite (Opcional)
+                                </label>
+                                <input
+                                    type="datetime-local"
+                                    value={dueDate}
+                                    onChange={(e) => setDueDate(e.target.value)}
+                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all font-medium text-slate-700"
+                                />
+                                <p className="text-xs text-slate-500 mt-1.5 font-medium">Dejar en blanco para tareas sin fecha de entrega.</p>
+                            </div>
+
+                            <div className="pt-2 flex gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => { setIsAssignModalOpen(false); setItemToAssign(null); }}
+                                    className="flex-1 px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={!selectedClassroom || isAssigning || classrooms.length === 0}
+                                    className="flex-1 px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {isAssigning ? <Loader2 size={18} className="animate-spin" /> : 'Asignar Tarea'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

@@ -75,7 +75,7 @@ const ToolbarBtn = ({ onClick, icon, label, variant = 'default', disabled = fals
 
 // ─── Componente principal ────────────────────────────────────
 
-const AssessmentGenerator = ({ isSidebarOpen, setIsSidebarOpen, session, loadedAssessment, clearLoadedAssessment }) => {
+const AssessmentGenerator = ({ isSidebarOpen, setIsSidebarOpen, session, profile, loadedAssessment, clearLoadedAssessment }) => {
     const [formData, setFormData] = useState({
         subject: '',
         year: '',
@@ -110,6 +110,23 @@ const AssessmentGenerator = ({ isSidebarOpen, setIsSidebarOpen, session, loadedA
         const t = setTimeout(() => setNotification(null), notification.duration || 5000);
         return () => clearTimeout(t);
     }, [notification]);
+
+    // Set initial values from local preferences
+    useEffect(() => {
+        const hist = (() => { try { return JSON.parse(localStorage.getItem('sd_assessments_history') || '[]'); } catch { return []; } })();
+        setSavedAssessments(hist);
+        loadData();
+
+        const prefs = (() => { try { return JSON.parse(localStorage.getItem('sd_preferences') || '{}'); } catch { return {}; } })();
+        if (prefs) {
+            setFormData(prev => ({
+                ...prev,
+                subject: prev.subject || prefs.defaultSubject || '',
+                year: prev.year || prefs.defaultYear || '',
+                topic: prev.topic || prefs.defaultTopic || '',
+            }));
+        }
+    }, [profile]);
 
     // Cargar evaluación desde comunidad / Mis Evaluaciones
     useEffect(() => {
@@ -177,6 +194,7 @@ const AssessmentGenerator = ({ isSidebarOpen, setIsSidebarOpen, session, loadedA
                 ...formData,
                 selectedDocs,
                 selectedSequences: sequencesContext,
+                defaultContext: profile?.defaultContext,
             });
 
             if (data.success) {

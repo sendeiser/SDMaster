@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     User, Settings as SettingsIcon, Save, Monitor, Clock, LogOut,
     BookOpen, GraduationCap, Camera, Lock, CheckCircle2, AlertCircle, Loader2, Sparkles
@@ -13,12 +13,17 @@ const Settings = ({ session }) => {
         full_name: '',
         avatar_url: '',
         subjects: [],
-        courses: []
+        courses: [],
+        role: 'teacher',
+        institution: ''
     });
     const [preferences, setPreferences] = useState({
         defaultDuration: '2h',
         defaultTheme: 'midnight',
-        defaultStructure: 'Tradicional'
+        defaultStructure: 'Tradicional',
+        defaultSubject: '',
+        defaultYear: '',
+        defaultTopic: ''
     });
 
     const [passwordData, setPasswordData] = useState({
@@ -41,13 +46,16 @@ const Settings = ({ session }) => {
                     full_name: data.full_name || '',
                     avatar_url: data.avatar_url || '',
                     subjects: data.subjects || [],
-                    courses: data.courses || []
+                    courses: data.courses || [],
+                    role: data.role || 'teacher',
+                    institution: data.institution || ''
                 });
             }
 
             const stored = localStorage.getItem('sd_preferences');
             if (stored) {
-                setPreferences(JSON.parse(stored));
+                const parsed = JSON.parse(stored);
+                setPreferences(prev => ({ ...prev, ...parsed }));
             }
         } catch (error) {
             console.error("Error cargando datos:", error);
@@ -207,51 +215,63 @@ const Settings = ({ session }) => {
                                         name="full_name"
                                         value={profile.full_name}
                                         onChange={handleProfileChange}
-                                        placeholder="Ej. Prof. Juan Pérez"
+                                        placeholder="Ej. Juan Pérez"
                                         className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/10 focus:border-brand-500 outline-none transition-all font-medium text-slate-800"
                                     />
                                 </div>
-                                <div className="flex flex-col justify-center">
-                                    <p className="text-xs text-slate-400 font-medium">Puedes cambiar tu foto haciendo clic en el ícono de la cámara arriba.</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-sm space-y-6">
-                            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                                <GraduationCap size={16} /> Perfil Académico
-                            </h3>
-
-                            <div className="space-y-6">
                                 <div>
-                                    <label className="block text-sm font-bold text-slate-700 mb-2">Materias que Dictas (Separadas por comas)</label>
-                                    <textarea
-                                        rows="2"
-                                        placeholder="Matemática, Física, Robótica..."
-                                        value={profile.subjects.join(', ')}
-                                        onChange={(e) => handleArrayChange('subjects', e.target.value)}
-                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/10 focus:border-brand-500 outline-none transition-all font-medium resize-none text-slate-800"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-bold text-slate-700 mb-2">Cursos/Años (Separados por comas)</label>
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">Institución Educativa</label>
                                     <input
                                         type="text"
-                                        placeholder="1° Año, 2° Año, 5° B"
-                                        value={profile.courses.join(', ')}
-                                        onChange={(e) => handleArrayChange('courses', e.target.value)}
+                                        name="institution"
+                                        value={profile.institution}
+                                        onChange={handleProfileChange}
+                                        placeholder="Ej. Colegio San Martín"
                                         className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/10 focus:border-brand-500 outline-none transition-all font-medium text-slate-800"
                                     />
                                 </div>
                             </div>
+
+
                         </div>
+
+                        {profile.role === 'teacher' && (
+                            <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-sm space-y-6">
+                                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                    <GraduationCap size={16} /> Perfil Académico
+                                </h3>
+
+                                <div className="space-y-6">
+                                    <div>
+                                        <label className="block text-sm font-bold text-slate-700 mb-2">Materias que Dictas (Separadas por comas)</label>
+                                        <textarea
+                                            rows="2"
+                                            placeholder="Matemática, Física, Robótica..."
+                                            value={profile.subjects.join(', ')}
+                                            onChange={(e) => handleArrayChange('subjects', e.target.value)}
+                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/10 focus:border-brand-500 outline-none transition-all font-medium resize-none text-slate-800"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-bold text-slate-700 mb-2">Cursos/Años (Separados por comas)</label>
+                                        <input
+                                            type="text"
+                                            placeholder="1° Año, 2° Año, 5° B"
+                                            value={profile.courses.join(', ')}
+                                            onChange={(e) => handleArrayChange('courses', e.target.value)}
+                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/10 focus:border-brand-500 outline-none transition-all font-medium text-slate-800"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-sm">
                             <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 mb-6">
                                 <Lock size={16} /> Seguridad de la Cuenta
                             </h3>
-                            <form onSubmit={handlePasswordUpdate} className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
-                                <div>
+                            <form onSubmit={handlePasswordUpdate} className="flex flex-col md:flex-row gap-6 items-start md:items-end">
+                                <div className="w-full md:flex-1">
                                     <label className="block text-sm font-bold text-slate-700 mb-2">Nueva Contraseña</label>
                                     <input
                                         type="password"
@@ -262,71 +282,101 @@ const Settings = ({ session }) => {
                                         placeholder="Mínimo 6 chars"
                                     />
                                 </div>
-                                <div className="flex gap-3">
+                                <div className="w-full md:flex-1">
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">Repetir Contraseña</label>
                                     <input
                                         type="password"
                                         required
                                         value={passwordData.confirmPassword}
                                         onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
-                                        className="flex-grow px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/10 focus:border-brand-500 outline-none transition-all font-medium text-slate-800"
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/10 focus:border-brand-500 outline-none transition-all font-medium text-slate-800"
                                         placeholder="Repetir..."
                                     />
-                                    <button
-                                        type="submit"
-                                        className="px-6 py-3 bg-slate-900 hover:bg-black:bg-brand-700 text-white rounded-xl font-bold transition-all shadow-lg"
-                                    >
-                                        Cambiar
-                                    </button>
                                 </div>
+                                <button
+                                    type="submit"
+                                    className="w-full md:w-auto px-10 py-3 bg-slate-900 hover:bg-black text-white rounded-xl font-bold transition-all shadow-xl shadow-slate-900/10 active:scale-95"
+                                >
+                                    Cambiar
+                                </button>
                             </form>
                         </div>
                     </div>
 
-                    {/* Columna Derecha: Preferencias Generador */}
+                    {/* Columna Derecha: Preferencias Generador (Solo Docentes) */}
                     <div className="space-y-8">
-                        <div className="bg-white rounded-3xl p-8 border-2 border-brand-50 shadow-sm space-y-6 lg:sticky lg:top-8">
-                            <h3 className="text-xs font-black text-brand-600 uppercase tracking-widest flex items-center gap-2">
-                                <Monitor size={16} /> Defaults del Generador
-                            </h3>
+                        {profile.role === 'teacher' && (
+                            <div className="bg-white rounded-3xl p-8 border-2 border-brand-50 shadow-sm space-y-6 lg:sticky lg:top-8">
+                                <h3 className="text-xs font-black text-brand-600 uppercase tracking-widest flex items-center gap-2">
+                                    <Monitor size={16} /> Defaults del Generador
+                                </h3>
 
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Materia Predeterminada</label>
-                                    <select
-                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 focus:border-brand-500 outline-none"
-                                        name="defaultSubject"
-                                        value={preferences.defaultSubject || ''}
-                                        onChange={handlePreferenceChange}
-                                    >
-                                        <option value="">Selecciona...</option>
-                                        {profile.subjects.map(s => <option key={s} value={s}>{s}</option>)}
-                                    </select>
-                                </div>
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Materia Predeterminada</label>
+                                        <select
+                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 focus:border-brand-500 outline-none"
+                                            name="defaultSubject"
+                                            value={preferences.defaultSubject}
+                                            onChange={handlePreferenceChange}
+                                        >
+                                            <option value="">Selecciona...</option>
+                                            {profile.subjects.map(s => <option key={s} value={s}>{s}</option>)}
+                                        </select>
+                                    </div>
 
-                                <div>
-                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Tema Visual Premium</label>
-                                    <select
-                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 focus:border-brand-500 outline-none"
-                                        name="defaultTheme"
-                                        value={preferences.defaultTheme}
-                                        onChange={handlePreferenceChange}
-                                    >
-                                        <option value="midnight">Midnight Pro</option>
-                                        <option value="solar">Solar Gold</option>
-                                        <option value="emerald">Emerald Luxe</option>
-                                        <option value="nordic">Nordic Ice</option>
-                                    </select>
-                                </div>
+                                    <div>
+                                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Año/Nivel Predeterminado</label>
+                                        <input
+                                            type="text"
+                                            name="defaultYear"
+                                            placeholder="Ej. 5° Año"
+                                            value={preferences.defaultYear}
+                                            onChange={handlePreferenceChange}
+                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 focus:border-brand-500 outline-none"
+                                        />
+                                    </div>
 
-                                <div className="pt-6">
-                                    <button
-                                        onClick={handleLogout}
-                                        className="w-full flex items-center justify-center gap-2 py-3 border-2 border-slate-100 text-slate-400 hover:text-red-500 hover:border-red-100 hover:bg-red-50:bg-red-900/10 rounded-xl font-bold transition-all text-xs uppercase tracking-widest"
-                                    >
-                                        <LogOut size={14} /> Salida Segura
-                                    </button>
+                                    <div>
+                                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Tema Predeterminado</label>
+                                        <input
+                                            type="text"
+                                            name="defaultTopic"
+                                            placeholder="Ej. Fotosíntesis"
+                                            value={preferences.defaultTopic}
+                                            onChange={handlePreferenceChange}
+                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 focus:border-brand-500 outline-none"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Tema Visual Premium</label>
+                                        <select
+                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 focus:border-brand-500 outline-none"
+                                            name="defaultTheme"
+                                            value={preferences.defaultTheme}
+                                            onChange={handlePreferenceChange}
+                                        >
+                                            <option value="midnight">Midnight Pro</option>
+                                            <option value="solar">Solar Gold</option>
+                                            <option value="emerald">Emerald Luxe</option>
+                                            <option value="nordic">Nordic Ice</option>
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
+                        )}
+
+                        <div className={`bg-white rounded-3xl p-8 border border-slate-100 shadow-sm ${profile.role === 'student' ? 'lg:sticky lg:top-8' : ''}`}>
+                            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 mb-6">
+                                <LogOut size={16} /> Gestión de Sesión
+                            </h3>
+                            <button
+                                onClick={handleLogout}
+                                className="w-full flex items-center justify-center gap-2 py-4 bg-red-50 text-red-600 hover:bg-red-100 border border-red-100 rounded-xl font-black transition-all text-xs uppercase tracking-[0.2em]"
+                            >
+                                <LogOut size={16} /> Salida Segura
+                            </button>
                         </div>
                     </div>
                 </div>

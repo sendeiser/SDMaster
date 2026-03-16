@@ -345,5 +345,60 @@ export const sequenceDbService = {
             console.error('Error eliminando evaluación:', error);
             throw error;
         }
+    },
+
+    /**
+     * ————— Aulas y Asignaciones —————
+     */
+
+    /**
+     * Obtiene las aulas del docente autenticado
+     */
+    async getTeacherClassrooms() {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return [];
+
+            const { data, error } = await supabase
+                .from('classrooms')
+                .select('*')
+                .eq('teacher_id', user.id)
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+            return data;
+        } catch (error) {
+            console.error('Error obteniendo aulas del docente:', error);
+            return [];
+        }
+    },
+
+    /**
+     * Asigna una secuencia o evaluación a un aula
+     */
+    async assignToClassroom(classroomId, item, itemType, dueDate = null) {
+        try {
+            const assignment = {
+                classroom_id: classroomId,
+                title: item.topic || 'Sin título',
+                description: item.subject ? `Materia: ${item.subject}` : '',
+                item_type: itemType,
+                item_id: item.id,
+                content_payload: item.content, // Clona el contenido
+                due_date: dueDate
+            };
+
+            const { data, error } = await supabase
+                .from('classroom_assignments')
+                .insert([assignment])
+                .select()
+                .single();
+
+            if (error) throw error;
+            return { success: true, data };
+        } catch (error) {
+            console.error('Error asignando a aula:', error);
+            throw error;
+        }
     }
 };
