@@ -51,9 +51,23 @@ export const antigravityService = {
         }
 
         const prompt = `
-${templateString ? `PLANTILLA ESTRUCTURAL DE REFERENCIA (USA ESTE ESQUEMA EXACTO):
+${templateString ? `
+════════════════════════════════════════════════════════
+PLANTILLA ESTRUCTURAL SELECCIONADA POR EL DOCENTE
+════════════════════════════════════════════════════════
 ${templateString}
-----------------------------------------------------` : ''}
+════════════════════════════════════════════════════════
+
+🚨 REGLA ABSOLUTA DE PLANTILLA:
+- DEBES seguir ESTRICTAMENTE la estructura de la plantilla anterior.
+- Replica EXACTAMENTE sus títulos, secciones, orden y formato visual.
+- NO inventes secciones nuevas ni omitas ninguna sección de la plantilla.
+- Si la plantilla tiene tablas de datos (ej: institución, materia, fecha), mantenlas.
+- Adapta SOLO el contenido interno (textos, ejercicios, temas) al tema solicitado.
+- PERO SIEMPRE incluye una sección de DESARROLLO TEÓRICO con explicación conceptual extensiva (mínimo 400 palabras), definiciones, ejemplos resueltos y fórmulas si aplica. Si la plantilla no la tiene, agrégala ANTES de la sección de actividades prácticas.
+` : `
+(No se seleccionó plantilla — usa la estructura por defecto del system prompt)
+`}
 
 CONTEXTO DE CONOCIMIENTOS (RAG):
 ${contextString}
@@ -72,15 +86,14 @@ ${suggestions ? `SUGERENCIAS ADICIONALES DEL USUARIO:
 ${suggestions}
 ----------------------------------------------------` : ''}
 
-REQUISITOS CRÍTICOS DE CONTENIDO Y ORQUESTACIÓN:
-1. MAXIMIZAR EJERCITACIÓN: La secuencia DEBE ser extremadamente completa. Incluye una sección extensa de "Actividades y Problemas" con al menos 10-15 ejercicios, problemas o desafíos prácticos detallados.
-2. COMPLETITUD: No resumas. Desarrolla cada consigna, explica el paso a paso de las actividades y asegúrate de que el material sea listo para usar en clase.
-3. SI HAY PLANTILLA: Imita el formato, los títulos y la organización visual de la "PLANTILLA ESTRUCTURAL" de arriba.
-4. FORMATO: Usa '# ' para títulos, '## ' para secciones y '-' para listas.
-5. CONTROL ESTRICTO DEL TIEMPO (CRONOGRAMA MATEMÁTICO):
-   - Al inicio o final de CADA actividad o momento de la clase, DEBES especificar EXACTAMENTE el tiempo que le tomará a los estudiantes realizarla en MINUTOS (ej: "Duración: 15 minutos").
-   - El tiempo asignado a cada ejercicio debe ser realista de acuerdo a la demanda cognitiva.
-   - LA SUMA PERFECTA Y MATEMÁTICA DE TODOS ESTOS MINUTOS INDIVIDUALES DEBE IGUALAR EXACTAMENTE AL "Tiempo Estimado" total indicado en '${duration}'. Si sobra tiempo, crea más actividades; si falta, ajusta las estimaciones, pero el total DEBE cuadrar perfectamente en formato numérico justificado.
+REQUISITOS CRÍTICOS DE CONTENIDO:
+1. DESARROLLO TEÓRICO OBLIGATORIO: SIEMPRE incluí una sección "## Desarrollo Teórico" con explicación completa del tema (definiciones, conceptos, ejemplos resueltos, fórmulas si aplica). Mínimo 400 palabras. DEBE ir ANTES de las actividades prácticas.
+2. MAXIMIZAR EJERCITACIÓN: Sección extensa de "Actividades y Problemas" con al menos 10-15 ejercicios detallados.
+3. COMPLETITUD: No resumas. Desarrolla cada consigna paso a paso. Material listo para clase.
+4. FORMATO: Markdown GFM exclusivamente. '# ' para título, '## ' para secciones, '### ' para sub-conceptos.
+5. CONTROL ESTRICTO DEL TIEMPO (CRONOGRAMA):
+   - CADA actividad DEBE tener su duración en minutos.
+   - LA SUMA DE TODOS LOS MINUTOS DEBE IGUALAR EXACTAMENTE '${duration}'.
 `;
 
         try {

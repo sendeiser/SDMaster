@@ -1,92 +1,79 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Sparkles, BookType, Calendar, Clock, Loader2, Copy, Check, ArrowRight, FileDown, History, Trash2, ChevronRight, FileText, Video, Edit3, Eye, FileOutput, MessageSquare, Database, CloudUpload, Lock, Globe, ListCheck, ClipboardCheck, GraduationCap } from 'lucide-react';
-import { saveAs } from 'file-saver';
+import {
+    Sparkles, BookType, Loader2, Check, FileDown, Trash2,
+    FileText, Edit3, Eye, FileOutput, Database, CloudUpload,
+    Lock, Globe, ListCheck, ClipboardCheck, GraduationCap,
+    Video, ChevronDown, AlertTriangle
+} from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { jsPDF } from 'jspdf';
-import html2canvas from 'html2canvas';
-import { antigravityService } from '../services/antigravityService';
-import { ragService } from '../services/ragService';
-import { sequenceDbService } from '../lib/sequenceDbService';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import rehypeRaw from 'rehype-raw';
 import 'katex/dist/katex.min.css';
-import { markdownToExportHtml, buildWordHtml } from '../utils/exportUtils';
+import { antigravityService } from '../services/antigravityService';
+import { ragService } from '../services/ragService';
+import { sequenceDbService } from '../lib/sequenceDbService';
+import { exportToPDF, exportToWord } from '../utils/docExporter';
 import RichEditor from './RichEditor';
-import { marked } from 'marked';
-import TurndownService from 'turndown';
-import { gfm } from 'turndown-plugin-gfm';
 
-// Iniciar turndown globalmente
-const turndownService = new TurndownService({
-    headingStyle: 'atx',
-    codeBlockStyle: 'fenced'
-});
-turndownService.use(gfm);
+// ─── Sub-componentes reutilizables ─────────────────────────
 
-// Sobreescribir el método escape por defecto para proteger LaTeX (\) pero mantener el resto
-turndownService.escape = function (string) {
-    return string
-        .replace(/(\*|_|~|`|\[|\]|#|&|<|>|\|)/g, (match) => {
-            if (match === '|') return match;
-            return '\\' + match;
-        })
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
+const InputField = ({ label, icon, name, value, onChange, placeholder, type = 'text' }) => (
+    <div className="space-y-1.5 group">
+        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1 group-focus-within:text-brand-600 transition-colors flex items-center gap-1">
+            {icon && <span className="opacity-60">{icon}</span>}
+            {label}
+        </label>
+        <input
+            type={type}
+            name={name}
+            value={value}
+            onChange={onChange}
+            placeholder={placeholder}
+            className="w-full rounded-xl border border-slate-200 bg-white/70 py-3 px-4 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all placeholder:text-slate-300 shadow-sm"
+        />
+    </div>
+);
+
+const SelectField = ({ label, name, value, onChange, options }) => (
+    <div className="space-y-1.5">
+        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">{label}</label>
+        <select
+            name={name}
+            value={value}
+            onChange={onChange}
+            className="w-full rounded-xl border border-slate-200 bg-white/70 py-3 px-4 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 cursor-pointer shadow-sm"
+        >
+            {options.map(opt => (
+                <option key={typeof opt === 'string' ? opt : opt.value} value={typeof opt === 'string' ? opt : opt.value}>
+                    {typeof opt === 'string' ? opt : opt.label}
+                </option>
+            ))}
+        </select>
+    </div>
+);
+
+const ToolbarBtn = ({ onClick, icon, label, variant = 'default', disabled = false }) => {
+    const variants = {
+        default: 'text-slate-600 hover:bg-slate-100 border border-transparent',
+        primary: 'bg-slate-900 text-white hover:bg-slate-800 shadow-md border border-slate-800',
+        danger: 'text-rose-500 hover:bg-rose-50 border border-transparent',
+        success: 'text-emerald-600 hover:bg-emerald-50 border border-transparent',
+    };
+    return (
+        <button
+            onClick={onClick}
+            disabled={disabled}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${variants[variant]}`}
+        >
+            {icon}
+            <span className="hidden sm:inline">{label}</span>
+        </button>
+    );
 };
 
-// ————— Theme Definitions (Shared with SequenceGenerator) —————
-const THEMES_CONFIG = {
-    midnight: {
-        h1: "text-3xl font-black text-slate-900 border-b-2 border-brand-500 pb-2 mb-6 mt-8 p-1",
-        h2: "text-xl font-bold text-slate-800 border-l-4 border-brand-400 pl-3 mb-4 mt-6",
-        h3: "text-lg font-bold text-slate-700 mb-3 mt-5",
-        p: "text-slate-600 leading-relaxed mb-4 text-sm md:text-base break-words whitespace-pre-wrap",
-        quote: "border-l-4 border-slate-200 pl-4 py-2 italic text-slate-500 my-6 bg-slate-50/50 rounded-r-lg",
-        tableHeader: "bg-slate-50 border-b border-slate-200 text-slate-800",
-        link: "text-brand-600 hover:underline",
-    },
-    solar: {
-        h1: "text-3xl font-black text-amber-900 border-b-2 border-amber-500 pb-2 mb-6 mt-8 p-1",
-        h2: "text-xl font-bold text-amber-800 border-l-4 border-amber-400 pl-3 mb-4 mt-6",
-        h3: "text-lg font-bold text-amber-700 mb-3 mt-5",
-        p: "text-amber-900/80 leading-relaxed mb-4 text-sm md:text-base break-words whitespace-pre-wrap",
-        quote: "border-l-4 border-amber-200 pl-4 py-2 italic text-amber-600 my-6 bg-amber-50/50 rounded-r-lg",
-        tableHeader: "bg-amber-50 border-b border-amber-200 text-amber-900",
-        link: "text-amber-700 hover:text-amber-900 underline",
-    },
-    emerald: {
-        h1: "text-3xl font-black text-emerald-900 border-b-2 border-emerald-500 pb-2 mb-6 mt-8 p-1",
-        h2: "text-xl font-bold text-emerald-800 border-l-4 border-emerald-400 pl-3 mb-4 mt-6",
-        h3: "text-lg font-bold text-emerald-700 mb-3 mt-5",
-        p: "text-emerald-900/80 leading-relaxed mb-4 text-sm md:text-base break-words whitespace-pre-wrap",
-        quote: "border-l-4 border-emerald-200 pl-4 py-2 italic text-emerald-600 my-6 bg-emerald-50/50 rounded-r-lg",
-        tableHeader: "bg-emerald-50 border-b border-emerald-200 text-emerald-900",
-        link: "text-emerald-700 hover:text-emerald-900 underline",
-    },
-    nordic: {
-        h1: "text-3xl font-light text-slate-900 border-b border-slate-200 pb-2 mb-6 mt-8 tracking-tight p-1",
-        h2: "text-xl font-medium text-slate-800 mb-4 mt-6",
-        h3: "text-lg font-medium text-slate-700 mb-3 mt-5",
-        p: "text-slate-700 leading-loose mb-4 text-sm md:text-base break-words whitespace-pre-wrap",
-        quote: "border-l-2 border-slate-800 pl-4 py-2 italic text-slate-600 my-6",
-        tableHeader: "bg-white border-b border-slate-900 text-slate-900",
-        link: "text-slate-900 hover:text-slate-600 underline",
-    },
-    apa: {
-        h1: "text-2xl font-bold text-black border-none pb-2 mb-8 mt-10 font-serif uppercase tracking-wider text-center p-1",
-        h2: "text-xl font-bold text-black border-none pb-1 mb-6 mt-8 font-serif uppercase tracking-tight",
-        h3: "text-lg font-bold text-black mb-4 mt-6 font-serif italic text-slate-800",
-        p: "text-black leading-relaxed mb-6 text-base break-words whitespace-pre-wrap font-serif text-justify px-2",
-        quote: "pl-8 pr-8 py-4 italic text-slate-700 my-8 font-serif border-l-2 border-slate-300 bg-slate-50/30",
-        tableHeader: "bg-slate-100 border-b-2 border-slate-900 text-black font-serif font-bold uppercase text-xs",
-        link: "text-slate-900 hover:underline font-serif",
-        containerClass: "px-24 py-20 bg-white shadow-2xl scale-[1.02] origin-top",
-    },
-    get classic() { return this.midnight; }
-};
+// ─── Componente principal ────────────────────────────────────
 
 const AssessmentGenerator = ({ isSidebarOpen, setIsSidebarOpen, session }) => {
     const [formData, setFormData] = useState({
@@ -96,118 +83,72 @@ const AssessmentGenerator = ({ isSidebarOpen, setIsSidebarOpen, session }) => {
         type: 'Examen Tradicional',
         difficulty: 'Intermedio',
         itemsCount: '5',
-        theme: 'midnight'
     });
 
     const [existingDocs, setExistingDocs] = useState([]);
     const [userSequences, setUserSequences] = useState([]);
-    const [savedAssessments, setSavedAssessments] = useState([]); // Nueva lista de evaluaciones
+    const [savedAssessments, setSavedAssessments] = useState([]);
     const [selectedDocs, setSelectedDocs] = useState([]);
-    const [selectedSequences, setSelectedSequences] = useState([]); // Array de IDs
+    const [selectedSequences, setSelectedSequences] = useState([]);
+
     const [isGenerating, setIsGenerating] = useState(false);
+    const [isExporting, setIsExporting] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+
+    // result es siempre Markdown puro
     const [result, setResult] = useState(null);
     const [isEditing, setIsEditing] = useState(false);
-    const [editableContent, setEditableContent] = useState('');
-    const resultRef = useRef(null);
+    const [editContent, setEditContent] = useState('');
+
+    const [notification, setNotification] = useState(null);
+
+    useEffect(() => { loadData(); }, []);
 
     useEffect(() => {
-        loadData();
-    }, []);
+        if (!notification) return;
+        const t = setTimeout(() => setNotification(null), notification.duration || 5000);
+        return () => clearTimeout(t);
+    }, [notification]);
+
+    const showNotif = (type, message, detail, duration = 5000) =>
+        setNotification({ type, message, detail, duration });
 
     const loadData = async () => {
         try {
             const [docs, sequences, assessments] = await Promise.all([
                 ragService.fetchUniqueDocuments(),
                 sequenceDbService.getUserSequences(),
-                sequenceDbService.getUserAssessments() // Cargar evaluaciones guardadas
+                sequenceDbService.getUserAssessments(),
             ]);
             setExistingDocs(docs || []);
             setUserSequences(sequences || []);
             setSavedAssessments(assessments || []);
-        } catch (error) {
-            console.error("Error loading data:", error);
-        }
-    };
-
-    const handleSaveToCloud = async () => {
-        if (!result) return;
-        setIsSaving(true);
-        try {
-            // Si estamos editando, usamos el contenido del editor convertido a MD
-            const contentToSave = isEditing ? turndownService.turndown(editableContent) : result;
-
-            const response = await sequenceDbService.saveAssessment({
-                ...formData,
-                content: contentToSave
-            });
-
-            if (response.success) {
-                alert("Evaluación guardada exitosamente en la nube 🚀");
-                loadData(); // Recargar historial
-            }
-        } catch (error) {
-            console.error("Error saving assessment:", error);
-            alert("No se pudo guardar la evaluación. Verifica tu conexión.");
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
-    const handleLoadSavedAssessment = (assessment) => {
-        setFormData({
-            subject: assessment.subject,
-            year: assessment.year,
-            topic: assessment.topic,
-            type: assessment.type,
-            difficulty: assessment.difficulty,
-            itemsCount: '?', // No guardado explícitamente pero se infiere
-            theme: assessment.theme || 'midnight'
-        });
-        setResult(assessment.content);
-        setEditableContent(marked.parse(assessment.content || ''));
-        setIsEditing(false);
-    };
-
-    const handleDeleteAssessment = async (e, id) => {
-        e.stopPropagation();
-        if (!confirm("¿Estás seguro de que quieres eliminar esta evaluación?")) return;
-        try {
-            await sequenceDbService.deleteAssessment(id);
-            loadData();
-        } catch (error) {
-            alert("Error al eliminar");
+        } catch (err) {
+            console.error('Error loading data:', err);
         }
     };
 
     const handleInputChange = (e) => {
-
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    const toggleDocSelection = (docName) => {
-        setSelectedDocs(prev =>
-            prev.includes(docName)
-                ? prev.filter(d => d !== docName)
-                : [...prev, docName]
-        );
-    };
+    const toggleDoc = (name) =>
+        setSelectedDocs(prev => prev.includes(name) ? prev.filter(d => d !== name) : [...prev, name]);
 
-    const toggleSequenceSelection = (seqId) => {
-        setSelectedSequences(prev =>
-            prev.includes(seqId)
-                ? prev.filter(id => id !== seqId)
-                : [...prev, seqId]
-        );
-    };
+    const toggleSequence = (id) =>
+        setSelectedSequences(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
 
     const generateAssessment = async () => {
-        if (!formData.subject || !formData.topic) return;
+        if (!formData.subject || !formData.topic) {
+            showNotif('warning', 'Campos Requeridos', 'Completa Materia y Tema para continuar.');
+            return;
+        }
         setIsGenerating(true);
         setResult(null);
+        setIsEditing(false);
+
         try {
-            // Preparar objetos de secuencias seleccionadas para el servicio
             const sequencesContext = userSequences
                 .filter(s => selectedSequences.includes(s.id))
                 .map(s => ({ topic: s.topic, content: s.content }));
@@ -215,336 +156,354 @@ const AssessmentGenerator = ({ isSidebarOpen, setIsSidebarOpen, session }) => {
             const data = await antigravityService.generateAssessment({
                 ...formData,
                 selectedDocs,
-                selectedSequences: sequencesContext
+                selectedSequences: sequencesContext,
             });
+
             if (data.success) {
                 setResult(data.content);
-                setEditableContent(marked.parse(data.content || ''));
+                setEditContent(data.content);
             }
-        } catch (error) {
-            alert(error.detail || "Error al generar la evaluación");
+        } catch (err) {
+            const msg = err.type === 'HIGH_DEMAND'
+                ? 'El modelo de IA está con alta demanda. Intentá en unos segundos.'
+                : err.detail || err.message || 'Error inesperado al generar.';
+            showNotif('error', 'Error al Generar', msg);
         } finally {
             setIsGenerating(false);
         }
     };
 
-    // ── downloadPDF ───────────────────────────────────────────────────────────────
-    const downloadPDF = async () => {
-        const element = resultRef.current;
-        if (!element || !result) {
-            alert('No hay contenido para exportar. Genera una evaluación primero.');
+    // Al entrar al editor: cargar el resultado actual en editContent
+    const enterEditMode = () => {
+        setEditContent(result || '');
+        setIsEditing(true);
+    };
+
+    // Al salir del editor: guardar editContent como nuevo result
+    const exitEditMode = () => {
+        setResult(editContent);
+        setIsEditing(false);
+    };
+
+    const getActiveContent = () => isEditing ? editContent : result;
+
+    const handleExportPDF = async () => {
+        const content = getActiveContent();
+        if (!content) return;
+        setIsExporting(true);
+        try {
+            await exportToPDF(content, { ...formData }, `Evaluacion_${(formData.topic || 'sin_tema').replace(/\s+/g, '_')}`);
+        } catch (err) {
+            console.error('PDF export error:', err);
+            showNotif('error', 'Error PDF', 'No se pudo generar el PDF.');
+        } finally {
+            setIsExporting(false);
+        }
+    };
+
+    const handleExportWord = async () => {
+        const content = getActiveContent();
+        if (!content) return;
+        setIsExporting(true);
+        try {
+            await exportToWord(content, { ...formData }, `Evaluacion_${(formData.topic || 'sin_tema').replace(/\s+/g, '_')}`);
+        } catch (err) {
+            console.error('Word export error:', err);
+            showNotif('error', 'Error Word', 'No se pudo generar el archivo Word.');
+        } finally {
+            setIsExporting(false);
+        }
+    };
+
+    const handleSave = async () => {
+        if (!result) return;
+        if (!session) {
+            showNotif('warning', 'Sesión Requerida', 'Iniciá sesión para guardar en la nube.');
             return;
         }
-        setIsGenerating(true);
+        setIsSaving(true);
         try {
-            const { jsPDF } = await import('jspdf');
-            const { default: html2canvas } = await import('html2canvas');
-
-            const canvas = await html2canvas(element, {
-                scale: 2,
-                useCORS: true,
-                logging: false,
-                backgroundColor: '#ffffff',
-                windowWidth: 900,
-                onclone: (clonedDoc) => {
-                    const el = clonedDoc.getElementById('pdf-content');
-                    if (!el) return;
-                    el.style.cssText = `
-                        max-height: none !important;
-                        overflow: visible !important;
-                        padding: 48px 64px !important;
-                        width: 820px !important;
-                        box-shadow: none !important;
-                        border: none !important;
-                    `;
-                    // Normalizar colores oklch que html2canvas no soporta
-                    el.querySelectorAll('*').forEach(node => {
-                        const s = window.getComputedStyle(node);
-                        if (s.color?.includes('oklch')) node.style.color = '#1e293b';
-                        if (s.backgroundColor?.includes('oklch')) node.style.backgroundColor = 'transparent';
-                        if (s.borderColor?.includes('oklch')) node.style.borderColor = '#e2e8f0';
-                    });
-                },
-            });
-
-            const pdf = new jsPDF('p', 'mm', 'a4');
-            const pageW = pdf.internal.pageSize.getWidth();
-            const pageH = pdf.internal.pageSize.getHeight();
-            const imgRatio = canvas.height / canvas.width;
-            const imgWidthMm = pageW - 20; // 10mm margen cada lado
-            const imgHeightMm = imgWidthMm * imgRatio;
-
-            let yOffset = 0;
-            let page = 0;
-
-            while (yOffset < canvas.height) {
-                if (page > 0) pdf.addPage();
-
-                // Crear un canvas temporal con sólo la porción de esta página
-                const pageCanvas = document.createElement('canvas');
-                const pxPerMm = canvas.width / imgWidthMm;
-                const sliceH = Math.round(pageH * pxPerMm);
-                pageCanvas.width = canvas.width;
-                pageCanvas.height = Math.min(sliceH, canvas.height - yOffset);
-
-                const ctx = pageCanvas.getContext('2d');
-                ctx.drawImage(canvas, 0, yOffset, canvas.width, pageCanvas.height, 0, 0, canvas.width, pageCanvas.height);
-
-                const imgData = pageCanvas.toDataURL('image/jpeg', 0.95);
-                const sliceHeightMm = (pageCanvas.height / canvas.width) * imgWidthMm;
-                pdf.addImage(imgData, 'JPEG', 10, 10, imgWidthMm, sliceHeightMm);
-
-                yOffset += sliceH;
-                page++;
+            const contentToSave = isEditing ? editContent : result;
+            const res = await sequenceDbService.saveAssessment({ ...formData, content: contentToSave });
+            if (res.success) {
+                showNotif('success', '¡Guardado!', 'La evaluación fue guardada en la nube.', 4000);
+                loadData();
             }
-
-            pdf.save(`Evaluacion_${(formData.topic || 'Sin_Tema').replace(/\s+/g, '_')}.pdf`);
         } catch (err) {
-            console.error('Error generando PDF:', err);
-            alert('Error al generar el PDF.');
+            showNotif('error', 'Error al Guardar', err.message || 'No se pudo guardar.');
         } finally {
-            setIsGenerating(false);
+            setIsSaving(false);
         }
     };
 
-    // ── downloadWord ──────────────────────────────────────────────────────────────
-    const downloadWord = async () => {
-        if (!result) return;
-        setIsGenerating(true);
+    const handleLoadAssessment = (item) => {
+        setFormData({
+            subject: item.subject || '',
+            year: item.year || '',
+            topic: item.topic || '',
+            type: item.type || 'Examen Tradicional',
+            difficulty: item.difficulty || 'Intermedio',
+            itemsCount: '?',
+        });
+        setResult(item.content || '');
+        setEditContent(item.content || '');
+        setIsEditing(false);
+    };
+
+    const handleDeleteAssessment = async (e, id) => {
+        e.stopPropagation();
+        if (!window.confirm('¿Eliminar esta evaluación del historial?')) return;
         try {
-            const contentToExport = isEditing
-                ? turndownService.turndown(editableContent)
-                : result;
-
-            const htmlContent = markdownToExportHtml(contentToExport);
-            const fullHtml = buildWordHtml(htmlContent, {
-                subject: formData.subject,
-                year: formData.year,
-                topic: formData.topic,
-            });
-
-            const blob = new Blob(['\ufeff', fullHtml], { type: 'application/msword' });
-            saveAs(blob, `Evaluacion_${(formData.topic || 'Sin_Tema').replace(/\s+/g, '_')}.doc`);
-        } catch (e) {
-            console.error('Error exportando Word:', e);
-            alert('Error al generar el archivo Word.');
-        } finally {
-            setIsGenerating(false);
+            await sequenceDbService.deleteAssessment(id);
+            loadData();
+        } catch {
+            showNotif('error', 'Error', 'No se pudo eliminar.');
         }
     };
 
-    const toggleEdit = () => {
-        if (isEditing) {
-            try {
-                const markdownContent = turndownService.turndown(editableContent);
-                setResult(markdownContent);
-            } catch (err) {
-                console.error("Error convirtiendo HTML a MD", err);
-                setResult(editableContent);
-            }
-        } else {
-            try {
-                const htmlContent = marked.parse(result || '');
-                setEditableContent(htmlContent);
-            } catch (err) {
-                console.error("Error convirtiendo MD a HTML", err);
-                setEditableContent(result || '');
-            }
-        }
-        setIsEditing(!isEditing);
-    };
-
-    const getMarkdownComponents = (theme) => {
-        const t = THEMES_CONFIG[theme] || THEMES_CONFIG.classic;
-        return {
-            h1: ({ children }) => <h1 className={t.h1}>{children}</h1>,
-            h2: ({ children }) => <h2 className={t.h2}>{children}</h2>,
-            h3: ({ children }) => <h3 className={t.h3}>{children}</h3>,
-            p: ({ children }) => <p className={t.p}>{children}</p>,
-            blockquote: ({ children }) => <blockquote className={t.quote}>{children}</blockquote>,
-            table: ({ children }) => <div className="table-wrapper"><table>{children}</table></div>,
-            th: ({ children }) => <th className={t.tableHeader}>{children}</th>,
-            td: ({ children }) => <td>{children}</td>,
-        };
-    };
+    // ── Render ─────────────────────────────────────────────────
 
     return (
-        <div className="flex-grow flex flex-col md:flex-row h-full overflow-hidden bg-slate-50 transition-colors duration-300">
-            {/* Sidebar de Configuración */}
-            <aside className={`${isSidebarOpen ? 'w-full md:w-96' : 'w-0'} bg-white border-r border-slate-200 transition-all duration-500 ease-in-out relative flex flex-col z-40 overflow-hidden`}>
-                <div className="p-8 flex-grow overflow-y-auto custom-scrollbar">
-                    <div className="flex items-center space-x-3 mb-8">
-                        <div className="w-10 h-10 bg-brand-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-brand-500/20">
-                            <ClipboardCheck size={20} />
+        <div className="flex-grow flex flex-col md:flex-row h-full overflow-hidden bg-slate-50">
+
+            {/* ── Notificación flotante ── */}
+            {notification && (
+                <div className={`fixed top-5 right-5 z-50 max-w-sm w-full p-4 rounded-2xl shadow-xl border transition-all animate-slide-up flex gap-3 items-start ${
+                    notification.type === 'error' ? 'bg-rose-50 border-rose-200 text-rose-800'
+                    : notification.type === 'warning' ? 'bg-amber-50 border-amber-200 text-amber-800'
+                    : 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                }`}>
+                    <AlertTriangle size={18} className="flex-shrink-0 mt-0.5" />
+                    <div>
+                        <p className="font-bold text-xs">{notification.message}</p>
+                        {notification.detail && <p className="text-xs mt-0.5 opacity-80">{notification.detail}</p>}
+                    </div>
+                    <button onClick={() => setNotification(null)} className="ml-auto text-xs opacity-50 hover:opacity-100">✕</button>
+                </div>
+            )}
+
+            {/* ── SIDEBAR ─────────────────────────────────────── */}
+            <aside className={`${isSidebarOpen ? 'w-full md:w-[22rem]' : 'w-0'} bg-white border-r border-slate-100 transition-all duration-500 ease-in-out flex flex-col z-40 overflow-hidden flex-shrink-0`}>
+                <div className="p-6 flex-grow overflow-y-auto custom-scrollbar">
+
+                    {/* Encabezado sidebar */}
+                    <div className="flex items-center gap-3 mb-7">
+                        <div className="w-9 h-9 bg-brand-600 rounded-xl flex items-center justify-center text-white shadow-md shadow-brand-500/30">
+                            <ClipboardCheck size={18} />
                         </div>
-                        <h2 className="text-xl font-black text-slate-900 tracking-tight uppercase">Evaluaciones <span className="text-brand-600">AI</span></h2>
+                        <div>
+                            <h2 className="text-sm font-black text-slate-900 tracking-tight">Evaluaciones <span className="text-brand-600">IA</span></h2>
+                            <p className="text-[9px] text-slate-400 font-medium uppercase tracking-wider">Generador Académico</p>
+                        </div>
                     </div>
 
-                    <div className="space-y-6">
-                        <InputField label="Materia" icon={<GraduationCap size={18} />} name="subject" value={formData.subject} onChange={handleInputChange} placeholder="Ej: Historia, Biología..." />
-                        <InputField label="Tema de Evaluación" icon={<BookType size={18} />} name="topic" value={formData.topic} onChange={handleInputChange} placeholder="Ej: Revolución de Mayo" />
+                    <div className="space-y-4">
+                        <InputField label="Materia" icon={<GraduationCap size={12} />} name="subject" value={formData.subject} onChange={handleInputChange} placeholder="Ej: Historia Argentina" />
+                        <InputField label="Tema de Evaluación" icon={<BookType size={12} />} name="topic" value={formData.topic} onChange={handleInputChange} placeholder="Ej: Revolución de Mayo" />
 
-                        <div className="grid grid-cols-2 gap-4">
-                            <SelectField label="Nivel/Año" name="year" value={formData.year} onChange={handleInputChange} options={['1° Año', '2° Año', '3° Año', '4° Año', '5° Año', '6° Año']} />
-                            <SelectField label="Dificultad" name="difficulty" value={formData.difficulty} onChange={handleInputChange} options={['Fácil', 'Intermedio', 'Difícil']} />
+                        <div className="grid grid-cols-2 gap-3">
+                            <SelectField label="Nivel / Año" name="year" value={formData.year} onChange={handleInputChange}
+                                options={['', '1° Año', '2° Año', '3° Año', '4° Año', '5° Año', '6° Año']} />
+                            <SelectField label="Dificultad" name="difficulty" value={formData.difficulty} onChange={handleInputChange}
+                                options={['Fácil', 'Intermedio', 'Difícil']} />
                         </div>
 
-                        <SelectField label="Tipo de Evaluación" name="type" value={formData.type} onChange={handleInputChange} options={['Examen Tradicional', 'Opción Múltiple', 'Rúbrica de Calificación', 'Cuestionario Rápido', 'Ensayo']} />
+                        <SelectField label="Tipo de Evaluación" name="type" value={formData.type} onChange={handleInputChange}
+                            options={['Examen Tradicional', 'Opción Múltiple', 'Rúbrica de Calificación', 'Cuestionario Rápido', 'Ensayo Argumentativo']} />
 
-                        <InputField label="Cantidad de Ítems" icon={<ListCheck size={18} />} name="itemsCount" value={formData.itemsCount} onChange={handleInputChange} placeholder="5" />
+                        <InputField label="Cantidad de Ítems" icon={<ListCheck size={12} />} name="itemsCount" value={formData.itemsCount} onChange={handleInputChange} placeholder="5" type="number" />
 
-                        {/* Fuente de Conocimiento - Secuencias */}
-                        <div className="space-y-3 pt-4 border-t border-slate-100">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1 flex items-center justify-between">
-                                <span>Secuencias de Referencia</span>
-                                <span className="bg-brand-100 text-brand-600 px-1.5 py-0.5 rounded-md text-[8px]">{userSequences.length}</span>
-                            </label>
-                            <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto p-2 border border-slate-200 bg-slate-50/50 rounded-2xl custom-scrollbar">
-                                {userSequences.length > 0 ? userSequences.map(seq => (
-                                    <button
-                                        key={seq.id}
-                                        onClick={() => toggleSequenceSelection(seq.id)}
-                                        className={`flex items-center justify-between p-3 rounded-xl border transition-all text-left group ${selectedSequences.includes(seq.id) ? 'bg-brand-50 border-brand-200 text-brand-700' : 'bg-white border-slate-200 text-slate-500 hover:border-brand-200'}`}
-                                    >
-                                        <div className="flex flex-col min-w-0">
-                                            <span className="text-[10px] font-bold truncate pr-2 uppercase tracking-tight">{seq.topic}</span>
-                                            <span className="text-[8px] text-slate-400 font-medium">{seq.subject} - {seq.year}</span>
-                                        </div>
-                                        {selectedSequences.includes(seq.id) ? <Check size={14} className="flex-shrink-0" /> : <div className="w-3.5 h-3.5 rounded-full border border-slate-200 flex-shrink-0 group-hover:border-brand-300" />}
-                                    </button>
-                                )) : (
-                                    <p className="text-[10px] text-slate-400 italic p-4 text-center">No tienes secuencias guardadas aún</p>
-                                )}
-                            </div>
-                        </div>
+                        {/* Secuencias de referencia */}
+                        <SectionSelector
+                            title="Secuencias de Referencia"
+                            count={userSequences.length}
+                            colorClass="brand"
+                            items={userSequences.map(s => ({
+                                id: s.id,
+                                label: s.topic,
+                                sublabel: `${s.subject} · ${s.year}`
+                            }))}
+                            selectedIds={selectedSequences}
+                            onToggle={toggleSequence}
+                            emptyText="No hay secuencias guardadas aún"
+                        />
 
-                        {/* Fuente de Conocimiento - Documentos KB */}
-                        <div className="space-y-3 pt-2">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1 flex items-center justify-between">
-                                <span>Contenidos de la KB</span>
-                                <span className="bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-md text-[8px]">{existingDocs.length}</span>
-                            </label>
-                            <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto p-2 border border-slate-200 bg-slate-50/50 rounded-2xl custom-scrollbar">
-                                {existingDocs.length > 0 ? existingDocs.map(doc => (
-                                    <button
-                                        key={doc.name}
-                                        onClick={() => toggleDocSelection(doc.name)}
-                                        className={`flex items-center justify-between p-3 rounded-xl border transition-all text-left group ${selectedDocs.includes(doc.name) ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-white border-slate-200 text-slate-500 hover:border-amber-200'}`}
-                                    >
-                                        <div className="flex items-center space-x-2 min-w-0">
-                                            <Database size={10} className={selectedDocs.includes(doc.name) ? 'text-amber-500' : 'text-slate-300'} />
-                                            <span className="text-[10px] font-bold truncate pr-2">{doc.name}</span>
-                                        </div>
-                                        {selectedDocs.includes(doc.name) ? <Check size={14} className="flex-shrink-0" /> : <div className="w-3.5 h-3.5 rounded-full border border-slate-200 flex-shrink-0 group-hover:border-amber-300" />}
-                                    </button>
-                                )) : (
-                                    <p className="text-[10px] text-slate-400 italic p-4 text-center">Sube archivos a la KB para usarlos aquí</p>
-                                )}
-                            </div>
-                        </div>
+                        {/* Documentos KB */}
+                        <SectionSelector
+                            title="Base de Conocimiento (KB)"
+                            count={existingDocs.length}
+                            colorClass="amber"
+                            items={existingDocs.map(d => ({
+                                id: d.name,
+                                label: d.name,
+                                sublabel: d.category || ''
+                            }))}
+                            selectedIds={selectedDocs}
+                            onToggle={toggleDoc}
+                            emptyText="Subí archivos a la KB para usarlos aquí"
+                        />
 
+                        {/* Botón generar */}
                         <button
                             onClick={generateAssessment}
                             disabled={isGenerating || !formData.subject || !formData.topic}
-                            className={`w-full py-4 rounded-[2rem] font-black text-sm uppercase tracking-widest transition-all transform active:scale-95 flex items-center justify-center space-x-3 shadow-xl ${isGenerating ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-slate-900 hover:bg-slate-800 text-white shadow-brand-500/20 shadow-lg'}`}
+                            className="w-full py-3.5 rounded-2xl font-black text-sm uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed bg-gradient-to-r from-brand-600 to-brand-700 text-white shadow-brand-500/25 hover:shadow-brand-500/40 hover:from-brand-700 hover:to-brand-800"
                         >
-                            {isGenerating ? <Loader2 className="animate-spin" size={20} /> : <Sparkles size={20} />}
-                            <span>{isGenerating ? 'Vinculando Fuentes...' : 'Generar con Contexto'}</span>
+                            {isGenerating ? <Loader2 className="animate-spin" size={18} /> : <Sparkles size={18} />}
+                            {isGenerating ? 'Generando evaluación...' : 'Generar con IA'}
                         </button>
 
-                        {/* Historial de Evaluaciones */}
-                        <div className="space-y-3 pt-6 border-t border-slate-100">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1 flex items-center justify-between">
-                                <span>Historial de Evaluaciones</span>
-                                <span className="bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded-md text-[8px]">{savedAssessments.length}</span>
-                            </label>
-                            <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto p-2 border border-slate-200 bg-slate-50/50 rounded-2xl custom-scrollbar">
-                                {savedAssessments.length > 0 ? savedAssessments.map(item => (
-                                    <button
-                                        key={item.id}
-                                        onClick={() => handleLoadSavedAssessment(item)}
-                                        className="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-white hover:border-purple-300 transition-all text-left group"
-                                    >
-                                        <div className="flex flex-col min-w-0">
-                                            <span className="text-[10px] font-bold truncate pr-6 uppercase tracking-tight text-slate-700">{item.topic}</span>
-                                            <span className="text-[8px] text-slate-400 font-medium">{item.subject} • {new Date(item.created_at).toLocaleDateString()}</span>
-                                        </div>
-                                        <button
-                                            onClick={(e) => handleDeleteAssessment(e, item.id)}
-                                            className="p-1.5 hover:bg-rose-50 text-slate-300 hover:text-rose-500 rounded-lg transition-colors"
+                        {/* Historial */}
+                        {savedAssessments.length > 0 && (
+                            <div className="space-y-2 pt-4 border-t border-slate-100">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center justify-between">
+                                    <span>Historial</span>
+                                    <span className="bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded text-[8px]">{savedAssessments.length}</span>
+                                </label>
+                                <div className="space-y-1.5 max-h-56 overflow-y-auto custom-scrollbar">
+                                    {savedAssessments.map(item => (
+                                        <div
+                                            key={item.id}
+                                            onClick={() => handleLoadAssessment(item)}
+                                            className="flex items-center justify-between p-2.5 rounded-xl border border-slate-100 bg-white hover:border-purple-200 hover:bg-purple-50/30 transition-all cursor-pointer group"
                                         >
-                                            <Trash2 size={12} />
-                                        </button>
-                                    </button>
-                                )) : (
-                                    <p className="text-[10px] text-slate-400 italic p-4 text-center">No has guardado evaluaciones aún</p>
-                                )}
+                                            <div className="min-w-0">
+                                                <p className="text-[10px] font-bold text-slate-700 truncate uppercase tracking-tight">{item.topic}</p>
+                                                <p className="text-[8px] text-slate-400">{item.subject} · {new Date(item.created_at).toLocaleDateString('es-AR')}</p>
+                                            </div>
+                                            <button
+                                                onClick={(e) => handleDeleteAssessment(e, item.id)}
+                                                className="p-1 rounded-lg text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-colors ml-2 flex-shrink-0"
+                                            >
+                                                <Trash2 size={11} />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
-                        </div>
+                        )}
                     </div>
                 </div>
             </aside>
 
-            {/* Area de Visualización Principal */}
-            <main className="flex-grow flex flex-col relative min-w-0">
-                {/* Herramientas de Cabecera */}
-                <div className="h-16 bg-white/80 backdrop-blur-sm border-b border-slate-200 flex items-center justify-between px-8 sticky top-0 z-30">
-                    <div className="flex items-center space-x-4">
-                        <button onClick={toggleEdit} className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-black transition-all ${isEditing ? 'bg-brand-600 text-white' : 'text-slate-600 hover:bg-slate-100:bg-slate-800'}`}>
-                            {isEditing ? <Eye size={16} /> : <Edit3 size={16} />}
-                            <span>{isEditing ? 'Vista Previa' : 'Modo Editor'}</span>
-                        </button>
-                        <div className="w-px h-5 bg-slate-200 mx-2" />
-                        <SelectFieldMinimal name="theme" value={formData.theme} onChange={handleInputChange} options={Object.keys(THEMES_CONFIG).map(k => ({ value: k, label: k.charAt(0).toUpperCase() + k.slice(1) }))} />
+            {/* ── ÁREA PRINCIPAL ───────────────────────────────── */}
+            <main className="flex-grow flex flex-col min-w-0 overflow-hidden">
+
+                {/* Barra de herramientas */}
+                <div className="h-14 bg-white/90 backdrop-blur-sm border-b border-slate-100 flex items-center justify-between px-5 flex-shrink-0 gap-2">
+                    <div className="flex items-center gap-1.5">
+                        {result && !isEditing && (
+                            <ToolbarBtn onClick={enterEditMode} icon={<Edit3 size={13} />} label="Editar" />
+                        )}
+                        {isEditing && (
+                            <ToolbarBtn onClick={exitEditMode} icon={<Eye size={13} />} label="Vista Previa" variant="primary" />
+                        )}
                     </div>
 
-                    {result && (
-                        <div className="flex items-center space-x-2">
-                            <ToolbarButton
-                                onClick={handleSaveToCloud}
-                                icon={isSaving ? <Loader2 size={15} className="animate-spin" /> : <CloudUpload size={15} />}
-                                label={isSaving ? "Guardando..." : "Guardar en la Nube"}
+                    {(result || isEditing) && (
+                        <div className="flex items-center gap-1.5 ml-auto">
+                            <ToolbarBtn
+                                onClick={handleSave}
+                                icon={isSaving ? <Loader2 size={13} className="animate-spin" /> : <CloudUpload size={13} />}
+                                label={isSaving ? 'Guardando...' : 'Guardar'}
+                                variant="success"
                                 disabled={isSaving}
                             />
-                            <div className="w-px h-5 bg-slate-200 mx-1" />
-                            <ToolbarButton onClick={downloadWord} icon={<FileOutput size={15} />} label="Word" />
-                            <div className="w-px h-5 bg-slate-200 mx-1" />
-                            <ToolbarButton onClick={downloadPDF} icon={<FileDown size={15} />} label="PDF" highlighted />
+                            <div className="w-px h-5 bg-slate-200" />
+                            <ToolbarBtn
+                                onClick={handleExportWord}
+                                icon={<FileOutput size={13} />}
+                                label="Word"
+                                disabled={isExporting}
+                            />
+                            <ToolbarBtn
+                                onClick={handleExportPDF}
+                                icon={isExporting ? <Loader2 size={13} className="animate-spin" /> : <FileDown size={13} />}
+                                label="PDF"
+                                variant="primary"
+                                disabled={isExporting}
+                            />
                         </div>
                     )}
                 </div>
 
-                <div className="flex-grow overflow-y-auto p-4 md:p-12 custom-scrollbar flex justify-center">
+                {/* Área de contenido */}
+                <div className="flex-grow overflow-y-auto p-4 md:p-10 custom-scrollbar flex justify-center items-start">
                     {isGenerating ? (
-                        <div className="flex flex-col items-center justify-center space-y-6 animate-pulse mt-20">
-                            <Loader2 size={48} className="animate-spin text-brand-600" />
-                            <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">Diseñando Evaluación...</h3>
+                        <div className="flex flex-col items-center justify-center gap-5 mt-24 text-center">
+                            <div className="relative">
+                                <div className="w-16 h-16 rounded-2xl bg-brand-100 flex items-center justify-center">
+                                    <Loader2 size={32} className="animate-spin text-brand-600" />
+                                </div>
+                            </div>
+                            <div>
+                                <h3 className="text-base font-black text-slate-900 uppercase tracking-tight">Diseñando Evaluación...</h3>
+                                <p className="text-xs text-slate-400 mt-1">Analizando contexto y generando ítems pedagógicos</p>
+                            </div>
+                        </div>
+                    ) : isEditing ? (
+                        <div className="w-full max-w-screen-xl animate-scale-up" style={{ height: 'calc(100vh - 10rem)' }}>
+                            <RichEditor value={editContent} onChange={setEditContent} />
                         </div>
                     ) : result ? (
-                        <div className="w-full max-w-screen-lg animate-scale-up origin-top relative pb-20">
-                            {isEditing ? (
-                                <RichEditor value={editableContent} onChange={setEditableContent} />
-                            ) : (
-                                <div
-                                    ref={resultRef}
-                                    id="pdf-content"
-                                    className={`${(THEMES_CONFIG[formData.theme] || THEMES_CONFIG.classic).containerClass || "px-10 md:px-20 py-16 shadow-[0_20px_50px_rgba(0,0,0,0.1)]"} bg-white border border-slate-100 min-h-[1056px] relative overflow-hidden break-words transition-all duration-500`}
-                                >
+                        <div className="w-full max-w-4xl animate-scale-up pb-16">
+                            {/* Cabecera del documento */}
+                            <div className="document-page">
+                                {/* Banda institucional superior */}
+                                <div className="flex items-center justify-between mb-8 pb-5 border-b-2 border-brand-700">
+                                    <div>
+                                        <div className="text-[8px] font-black uppercase tracking-[0.25em] text-brand-600 mb-1">Instrumento de Evaluación</div>
+                                        <h1 className="text-xl font-black text-slate-900 leading-tight">{formData.topic || 'Evaluación Académica'}</h1>
+                                        <p className="text-xs text-slate-500 mt-1 font-medium">{formData.subject} {formData.year ? `· ${formData.year}` : ''} {formData.type ? `· ${formData.type}` : ''}</p>
+                                    </div>
+                                    <div className="text-right">
+                                        <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-brand-50 border border-brand-100">
+                                            <ClipboardCheck size={11} className="text-brand-600" />
+                                            <span className="text-[9px] font-black text-brand-600 uppercase tracking-wider">{formData.difficulty}</span>
+                                        </div>
+                                        <p className="text-[9px] text-slate-400 mt-2 font-mono">{new Date().toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+                                    </div>
+                                </div>
+
+                                {/* Contenido Markdown */}
+                                <div className="academic-preview">
                                     <ReactMarkdown
                                         remarkPlugins={[remarkGfm, remarkMath]}
                                         rehypePlugins={[rehypeKatex, rehypeRaw]}
-                                        components={getMarkdownComponents(formData.theme)}
+                                        components={{
+                                            // Wrapping tables for horizontal scroll
+                                            table: ({ children }) => (
+                                                <div className="overflow-x-auto my-4 rounded-lg">
+                                                    <table>{children}</table>
+                                                </div>
+                                            ),
+                                            // Render YouTube links as cards
+                                            a: ({ href, children }) => {
+                                                if (href?.includes('youtube.com') || href?.includes('youtu.be')) {
+                                                    return (
+                                                        <a href={href} target="_blank" rel="noopener noreferrer"
+                                                            className="inline-flex items-center gap-2 px-3 py-1.5 bg-red-50 border border-red-100 text-red-700 rounded-lg text-xs font-semibold hover:bg-red-100 transition-colors my-1">
+                                                            <Video size={12} />
+                                                            {children}
+                                                        </a>
+                                                    );
+                                                }
+                                                return <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>;
+                                            }
+                                        }}
                                     >
                                         {result}
                                     </ReactMarkdown>
                                 </div>
-                            )}
+                            </div>
                         </div>
                     ) : (
-                        <div className="flex flex-col items-center justify-center space-y-6 mt-20 text-center opacity-30">
-                            <GraduationCap size={64} className="text-slate-400" />
-                            <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter">Sin Evaluación</h3>
-                            <p className="max-w-xs text-sm font-medium text-slate-500">Configura los parámetros y haz clic en "Generar" para crear una evaluación a medida.</p>
+                        <div className="flex flex-col items-center justify-center gap-5 mt-24 text-center opacity-25 select-none">
+                            <GraduationCap size={56} className="text-slate-400" />
+                            <div>
+                                <h3 className="text-lg font-black text-slate-900 uppercase tracking-tighter">Sin Evaluación</h3>
+                                <p className="max-w-xs text-xs font-medium text-slate-500 mt-2">Completá los parámetros y hacé clic en "Generar con IA" para crear una evaluación académica a medida.</p>
+                            </div>
                         </div>
                     )}
                 </div>
@@ -553,37 +512,63 @@ const AssessmentGenerator = ({ isSidebarOpen, setIsSidebarOpen, session }) => {
     );
 };
 
-// Reusable Small Components
-const InputField = ({ label, icon, name, value, onChange, placeholder }) => (
-    <div className="space-y-2 group">
-        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1 group-focus-within:text-brand-600 transition-colors">{label}</label>
-        <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-brand-500 transition-all">{icon}</div>
-            <input type="text" name={name} value={value} onChange={onChange} className="pl-12 w-full rounded-2xl border border-slate-200 bg-white/50 py-4 px-4 text-sm font-bold text-slate-800 focus:outline-none focus:ring-4 focus:ring-brand-500/10 focus:border-brand-500 transition-all placeholder:text-slate-200 shadow-sm" placeholder={placeholder} />
+// ── SectionSelector ─────────────────────────────────────────
+const SectionSelector = ({ title, count, colorClass, items, selectedIds, onToggle, emptyText }) => {
+    const [open, setOpen] = useState(false);
+    const colorMap = {
+        brand: 'bg-brand-100 text-brand-600 border-brand-200',
+        amber: 'bg-amber-100 text-amber-600 border-amber-200',
+    };
+    const selectedColor = colorMap[colorClass] || colorMap.brand;
+
+    return (
+        <div className="space-y-2 pt-3 border-t border-slate-100">
+            <button
+                type="button"
+                onClick={() => setOpen(o => !o)}
+                className="w-full flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors"
+            >
+                <span>{title}</span>
+                <div className="flex items-center gap-1.5">
+                    {selectedIds.length > 0 && (
+                        <span className={`px-1.5 py-0.5 rounded text-[8px] font-black border ${selectedColor}`}>
+                            {selectedIds.length}
+                        </span>
+                    )}
+                    <span className={`w-4 h-4 bg-slate-100 rounded text-[8px] font-mono flex items-center justify-center`}>{count}</span>
+                    <ChevronDown size={12} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
+                </div>
+            </button>
+
+            {open && (
+                <div className="space-y-1 max-h-44 overflow-y-auto custom-scrollbar p-1 bg-slate-50 rounded-xl border border-slate-100 animate-fade-in">
+                    {items.length > 0 ? items.map(item => (
+                        <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => onToggle(item.id)}
+                            className={`w-full flex items-center justify-between p-2.5 rounded-lg border transition-all text-left text-[10px] ${
+                                selectedIds.includes(item.id)
+                                    ? `${selectedColor} border-current`
+                                    : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'
+                            }`}
+                        >
+                            <div className="min-w-0">
+                                <div className="font-bold truncate">{item.label}</div>
+                                {item.sublabel && <div className="opacity-60 text-[8px]">{item.sublabel}</div>}
+                            </div>
+                            {selectedIds.includes(item.id)
+                                ? <Check size={12} className="flex-shrink-0" />
+                                : <div className="w-3 h-3 rounded-full border border-current opacity-30 flex-shrink-0" />
+                            }
+                        </button>
+                    )) : (
+                        <p className="text-[10px] text-slate-400 italic p-3 text-center">{emptyText}</p>
+                    )}
+                </div>
+            )}
         </div>
-    </div>
-);
-
-const SelectField = ({ label, name, value, onChange, options }) => (
-    <div className="space-y-2">
-        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">{label}</label>
-        <select name={name} value={value} onChange={onChange} className="w-full rounded-2xl border border-slate-200 bg-white/50 py-4 px-4 text-sm font-bold text-slate-800 focus:outline-none focus:ring-4 focus:ring-brand-500/10 focus:border-brand-500 cursor-pointer shadow-sm">
-            {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-        </select>
-    </div>
-);
-
-const SelectFieldMinimal = ({ name, value, onChange, options }) => (
-    <select name={name} value={value} onChange={onChange} className="text-[10px] font-black uppercase tracking-widest text-slate-500 bg-transparent border border-slate-200 rounded-lg px-3 py-1.5 outline-none hover:border-slate-300 transition-all cursor-pointer">
-        {options.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-    </select>
-);
-
-const ToolbarButton = ({ onClick, icon, label, highlighted = false }) => (
-    <button onClick={onClick} className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all active:scale-95 group relative ${highlighted ? 'bg-slate-900 text-white shadow-lg' : 'hover:bg-slate-100:bg-slate-800 text-slate-600'}`}>
-        {icon}
-        <span className="text-[10px] font-black uppercase tracking-widest hiddn lg:block">{label}</span>
-    </button>
-);
+    );
+};
 
 export default AssessmentGenerator;

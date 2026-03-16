@@ -409,6 +409,251 @@ tr:hover td {
   box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
 }
 
-.quill-premium-wrapper .ql-container.ql-snow {
-  border: none !important;
+/* ======================================================
+   ACADEMIC PREVIEW — estilos para ReactMarkdown preview
+   Se aplica tanto en SequenceGenerator como AssessmentGenerator
+   ====================================================== */
+
+.academic-preview {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-size: 0.9rem;
+  color: #1e293b;
+  line-height: 1.75;
+}
+
+/* Headings */
+.academic-preview h1 {
+  font-size: 1.6rem;
+  font-weight: 900;
+  color: #0f172a;
+  border-bottom: 2.5px solid #1e40af;
+  padding-bottom: 0.5rem;
+  margin-top: 1.5rem;
+  margin-bottom: 1.2rem;
+  letter-spacing: -0.02em;
+}
+
+.academic-preview h2 {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #1e3a8a;
+  border-left: 4px solid #2563eb;
+  padding-left: 0.75rem;
+  margin-top: 1.5rem;
+  margin-bottom: 0.9rem;
+}
+
+.academic-preview h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #334155;
+  margin-top: 1.2rem;
+  margin-bottom: 0.6rem;
+}
+
+.academic-preview h4,
+.academic-preview h5,
+.academic-preview h6 {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #475569;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Párrafos */
+.academic-preview p {
+  color: #334155;
+  margin-bottom: 0.85rem;
+  line-height: 1.75;
+}
+
+/* Listas */
+.academic-preview ul {
+  list-style: disc;
+  list-style-position: outside;
+  margin-left: 1.5rem;
+  margin-bottom: 1rem;
+  color: #334155;
+}
+
+.academic-preview ol {
+  list-style: decimal;
+  list-style-position: outside;
+  margin-left: 1.5rem;
+  margin-bottom: 1rem;
+  color: #334155;
+}
+
+.academic-preview li {
+  margin-bottom: 0.3rem;
+  padding-left: 0.25rem;
+  line-height: 1.6;
+}
+
+/* Blockquote */
+.academic-preview blockquote {
+  border-left: 4px solid #bfdbfe;
+  padding: 0.75rem 1.25rem;
+  margin: 1.25rem 0;
+  background-color: #eff6ff;
+  border-radius: 0 0.5rem 0.5rem 0;
+  color: #1e40af;
+  font-style: italic;
+}
+
+/* Código inline */
+.academic-preview code {
+  background-color: #f1f5f9;
+  color: #dc2626;
+  padding: 0.1rem 0.4rem;
+  border-radius: 0.25rem;
+  font-family: 'Courier New', monospace;
+  font-size: 0.82rem;
+}
+
+/* Bloque de código */
+.academic-preview pre {
+  background-color: #0f172a;
+  color: #e2e8f0;
+  padding: 1.2rem 1.5rem;
+  border-radius: 0.75rem;
+  overflow-x: auto;
+  margin: 1.2rem 0;
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+
+.academic-preview pre code {
+  background: none;
+  color: inherit;
+  padding: 0;
+  font-size: inherit;
+}
+
+/* Separador */
+.academic-preview hr {
+  border: none;
+  border-top: 1.5px solid #e2e8f0;
+  margin: 2rem 0;
+}
+
+/* ── TABLAS ── */
+.academic-preview .table-wrapper,
+.academic-preview table {
+  width: 100%;
+}
+
+.academic-preview table {
+  width: 100%;
+  border-collapse: collapse;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  margin: 1.25rem 0;
+  font-size: 0.85rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  min-width: auto;
+}
+
+.academic-preview th {
+  background-color: #1e3a8a;
+  color: #ffffff;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  letter-spacing: 0.07em;
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border: none;
+}
+
+.academic-preview td {
+  padding: 0.6rem 1rem;
+  color: #334155;
+  border-bottom: 1px solid #e2e8f0;
+  border-right: 1px solid #f1f5f9;
+  vertical-align: top;
+  line-height: 1.5;
+  font-size: 0.85rem;
+}
+
+.academic-preview td:last-child {
+  border-right: none;
+}
+
+.academic-preview tr:nth-child(even) td {
+  background-color: #f8fafc;
+}
+
+.academic-preview tr:hover td {
+  background-color: #eff6ff;
+  transition: background-color 0.15s ease;
+}
+
+.academic-preview tr:last-child td {
+  border-bottom: none;
+}
+
+/* ── KATEX / LaTeX ── */
+.academic-preview .katex-display {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  padding: 1rem 1.5rem;
+  margin: 1.25rem 0;
+  overflow-x: auto;
+  text-align: center;
+}
+
+.academic-preview .katex {
+  font-size: 1.05rem;
+}
+
+/* Imágenes */
+.academic-preview img {
+  max-width: 100%;
+  border-radius: 0.75rem;
+  margin: 1rem 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* Strong / Em */
+.academic-preview strong { font-weight: 700; color: #0f172a; }
+.academic-preview em { font-style: italic; color: #475569; }
+
+/* Links */
+.academic-preview a {
+  color: #2563eb;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.academic-preview a:hover {
+  color: #1d4ed8;
+}
+
+/* ── MODO DOCUMENTO (simulación A4) ── */
+.document-page {
+  background: #ffffff;
+  min-height: 1056px;
+  padding: 3rem 4rem;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 1px solid #e8ecf0;
+  position: relative;
+}
+
+@media (max-width: 768px) {
+  .document-page {
+    padding: 1.5rem 1.25rem;
+  }
+}
+
+/* Scale-up animation */
+@keyframes scale-up {
+  from { opacity: 0; transform: scale(0.98) translateY(8px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.animate-scale-up {
+  animation: scale-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
