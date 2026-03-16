@@ -75,7 +75,7 @@ const ToolbarBtn = ({ onClick, icon, label, variant = 'default', disabled = fals
 
 // ─── Componente principal ────────────────────────────────────
 
-const AssessmentGenerator = ({ isSidebarOpen, setIsSidebarOpen, session }) => {
+const AssessmentGenerator = ({ isSidebarOpen, setIsSidebarOpen, session, loadedAssessment, clearLoadedAssessment }) => {
     const [formData, setFormData] = useState({
         subject: '',
         year: '',
@@ -110,6 +110,24 @@ const AssessmentGenerator = ({ isSidebarOpen, setIsSidebarOpen, session }) => {
         const t = setTimeout(() => setNotification(null), notification.duration || 5000);
         return () => clearTimeout(t);
     }, [notification]);
+
+    // Cargar evaluación desde comunidad / Mis Evaluaciones
+    useEffect(() => {
+        if (!loadedAssessment) return;
+        setFormData({
+            subject: loadedAssessment.subject || '',
+            year: loadedAssessment.year || '',
+            topic: loadedAssessment.topic || '',
+            type: loadedAssessment.type || 'Examen Tradicional',
+            difficulty: loadedAssessment.difficulty || 'Intermedio',
+            itemsCount: '5',
+        });
+        setResult(loadedAssessment.content || '');
+        setEditContent(loadedAssessment.content || '');
+        setLoadedId(loadedAssessment.id || null);
+        setIsEditing(false);
+        if (clearLoadedAssessment) clearLoadedAssessment();
+    }, [loadedAssessment, clearLoadedAssessment]);
 
     const showNotif = (type, message, detail, duration = 5000) =>
         setNotification({ type, message, detail, duration });

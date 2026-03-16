@@ -283,18 +283,52 @@ export const sequenceDbService = {
                 .eq('user_id', user.id)
                 .order('created_at', { ascending: false });
 
+            return data;
+        } catch (error) {
+            console.error('Error obteniendo evaluaciones:', error);
+            return [];
+        }
+    },
+
+    async getPublicAssessments() {
+        try {
+            const { data, error } = await supabase
+                .from('saved_assessments')
+                .select(`
+                    id, subject, topic, year, created_at, content, theme, type, difficulty,
+                    user_id,
+                    profiles:user_id (full_name, avatar_url)
+                `)
+                .eq('is_public', true)
+                .order('created_at', { ascending: false });
+
             if (error) {
-                // Si la tabla no existe, retornar vacío sin explotar
                 if (error.message?.includes('schema cache') || error.code === '42P01') {
-                    console.warn('Tabla saved_assessments no encontrada. Ejecutá supabase_create_assessments.sql');
                     return [];
                 }
                 throw error;
             }
             return data;
         } catch (error) {
-            console.error('Error obteniendo evaluaciones:', error);
+            console.error('Error obteniendo evaluaciones públicas:', error);
             return [];
+        }
+    },
+
+    async toggleAssessmentVisibility(id, isPublic) {
+        try {
+            const { data, error } = await supabase
+                .from('saved_assessments')
+                .update({ is_public: isPublic })
+                .eq('id', id)
+                .select()
+                .single();
+
+            if (error) throw error;
+            return data;
+        } catch (error) {
+            console.error('Error actualizando visibilidad de evaluación:', error);
+            throw error;
         }
     },
 

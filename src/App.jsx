@@ -16,11 +16,17 @@ function App() {
   const [session, setSession] = useState(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [loadedSequence, setLoadedSequence] = useState(null);
+  const [loadedAssessment, setLoadedAssessment] = useState(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const handleLoadSequence = (seq) => {
     setLoadedSequence(seq);
     setActiveTab('generator');
+  };
+
+  const handleLoadAssessment = (assessment) => {
+    setLoadedAssessment(assessment);
+    setActiveTab('assessments');
   };
 
   useEffect(() => {
@@ -211,14 +217,16 @@ function App() {
             </div>
           </div>
         ) : activeTab === 'community' ? (
-          <ExploreSequences onLoadSequence={handleLoadSequence} />
+          <ExploreSequences onLoadSequence={handleLoadSequence} onLoadAssessment={handleLoadAssessment} />
         ) : activeTab === 'my_sequences' ? (
-          <MySequences session={session} onLoadSequence={handleLoadSequence} />
+          <MySequences session={session} onLoadSequence={handleLoadSequence} onLoadAssessment={handleLoadAssessment} />
         ) : activeTab === 'assessments' ? (
           <AssessmentGenerator
             isSidebarOpen={isSidebarOpen}
             setIsSidebarOpen={setIsSidebarOpen}
             session={session}
+            loadedAssessment={loadedAssessment}
+            clearLoadedAssessment={() => setLoadedAssessment(null)}
           />
         ) : (
           <Settings session={session} />
