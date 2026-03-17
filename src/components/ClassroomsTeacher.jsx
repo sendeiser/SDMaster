@@ -99,18 +99,18 @@ const ClassroomsTeacher = ({ session, profile }) => {
     }
 
     return (
-        <div className="max-w-6xl mx-auto space-y-8">
+        <div className="max-w-6xl mx-auto space-y-6 sm:space-y-8 p-4 sm:p-0">
             {/* Encabezado */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-black text-slate-800 tracking-tight">Mis Aulas</h1>
-                    <p className="text-slate-500 mt-2 font-medium">
+                    <h1 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight">Mis Aulas</h1>
+                    <p className="text-xs sm:text-sm text-slate-500 mt-1 sm:mt-2 font-medium">
                         Administra tus clases, invita estudiantes y asigna actividades.
                     </p>
                 </div>
                 <button
                     onClick={() => setIsCreating(true)}
-                    className="flex items-center gap-2 px-6 py-3 bg-brand-500 hover:bg-brand-600 text-white rounded-xl font-bold transition-all shadow-sm hover:shadow-brand-500/25 active:scale-95 whitespace-nowrap"
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-brand-500 hover:bg-brand-600 text-white rounded-xl font-bold transition-all shadow-sm hover:shadow-brand-500/25 active:scale-95 whitespace-nowrap"
                 >
                     <Plus size={20} />
                     Crear Aula

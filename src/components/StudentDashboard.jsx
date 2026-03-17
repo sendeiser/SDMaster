@@ -167,9 +167,21 @@ const StudentDashboard = ({ session, profile }) => {
     }
 
     return (
-        <div className="flex-grow flex bg-slate-50 overflow-hidden h-full">
+        <div className="flex-grow flex bg-slate-50 overflow-hidden h-full relative">
+            {/* Overlay móvil para sidebar */}
+            {activeClassroomId && (
+                <div className="lg:hidden absolute top-4 left-4 z-40">
+                    <button 
+                        onClick={() => setActiveClassroomId(null)}
+                        className="p-2 bg-white border border-slate-200 rounded-lg shadow-sm text-slate-600"
+                    >
+                        <Users size={20} />
+                    </button>
+                </div>
+            )}
+
             {/* Sidebar de Aulas del Estudiante */}
-            <div className="w-80 bg-white border-r border-slate-200 flex flex-col h-full flex-shrink-0">
+            <div className={`fixed inset-y-0 left-0 z-50 w-80 bg-white border-r border-slate-200 flex flex-col h-full transform transition-transform duration-300 lg:relative lg:translate-x-0 ${!activeClassroomId ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
                 <div className="p-6 border-b border-slate-100 flex-shrink-0">
                     <h2 className="text-xl font-black text-slate-800 flex items-center gap-2 mb-6">
                         <Users className="text-brand-500" />
@@ -230,7 +242,7 @@ const StudentDashboard = ({ session, profile }) => {
             </div>
 
             {/* Panel Principal - Tareas del Aula Activa */}
-            <div className="flex-1 overflow-y-auto bg-slate-50/50 p-8 custom-scrollbar">
+            <div className={`flex-1 overflow-y-auto bg-slate-50/50 p-4 md:p-8 custom-scrollbar ${!activeClassroomId ? 'hidden lg:block' : 'block'}`}>
                 <div className="max-w-4xl mx-auto">
                     {activeClassroomId ? (
                         <>

@@ -232,10 +232,10 @@ const ClassroomDetail = ({ classroom, onBack }) => {
                     </div>
                 </header>
 
-                <div className="flex flex-1 overflow-hidden">
+                <div className="flex flex-1 flex-col lg:flex-row overflow-hidden">
                     {/* Lista de Alumnos/Entregas */}
-                    <div className="w-80 bg-white border-r border-slate-200 flex flex-col overflow-y-auto">
-                        <div className="p-4 border-b border-slate-100 bg-slate-50/50">
+                    <div className="w-full lg:w-80 bg-white border-b lg:border-b-0 lg:border-r border-slate-200 flex flex-col shrink-0 max-h-[250px] lg:max-h-full overflow-y-auto">
+                        <div className="p-3 lg:p-4 border-b border-slate-100 bg-slate-50/50 sticky top-0 z-10">
                             <h3 className="font-bold text-slate-700 text-sm">Entregas ({submissions.length}/{students.length})</h3>
                         </div>
                         <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
@@ -375,24 +375,24 @@ const ClassroomDetail = ({ classroom, onBack }) => {
                     <ArrowLeft size={20} className="text-slate-600" />
                 </button>
                 <div>
-                    <h1 className="text-3xl font-black text-slate-800 tracking-tight">{classroom.name}</h1>
-                    <div className="flex items-center gap-3 mt-1 text-sm font-medium text-slate-500">
+                    <h1 className="text-2xl lg:text-3xl font-black text-slate-800 tracking-tight truncate pr-4">{classroom.name}</h1>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-sm font-medium text-slate-500">
                         <span className="flex items-center gap-1"><Users size={14}/> {students.length} alumnos</span>
-                        <span className="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
+                        <span className="hidden sm:inline w-1.5 h-1.5 rounded-full bg-slate-300"></span>
                         <span className="font-mono text-brand-600 font-bold bg-brand-50 px-2 rounded">Código: {classroom.join_code}</span>
                     </div>
                 </div>
             </div>
 
             {/* Tabs */}
-            <div className="flex space-x-2 border-b border-slate-200">
-                {[{id:'assignments', label:'Trabajo de Clase', icon:ClipboardCheck}, 
+            <div className="flex space-x-1 sm:space-x-2 border-b border-slate-200 overflow-x-auto no-scrollbar">
+                {[{id:'assignments', label:'Trabajos', icon:ClipboardCheck}, 
                   {id:'students', label:'Alumnos', icon:Users},
-                  {id:'grades', label:'Calificaciones', icon:FileText}].map(tab => (
+                  {id:'grades', label:'Notas', icon:FileText}].map(tab => (
                     <button
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
-                        className={`flex items-center gap-2 px-6 py-3 font-bold text-sm transition-colors border-b-2 -mb-px ${
+                        className={`flex items-center gap-2 px-4 sm:px-6 py-3 font-bold text-xs sm:text-sm transition-colors border-b-2 -mb-px whitespace-nowrap ${
                             activeTab === tab.id 
                                 ? 'border-brand-500 text-brand-600 bg-brand-50/50' 
                                 : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'
@@ -449,9 +449,10 @@ const ClassroomDetail = ({ classroom, onBack }) => {
                 )}
 
                 {activeTab === 'students' && (
-                    <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden">
-                        <table className="w-full text-left">
-                            <thead className="bg-slate-50 border-b border-slate-200 text-xs uppercase tracking-widest font-black text-slate-500">
+                    <div className="bg-white border border-slate-200 rounded-2xl lg:rounded-3xl overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left min-w-[500px]">
+                                <thead className="bg-slate-50 border-b border-slate-200 text-xs uppercase tracking-widest font-black text-slate-500">
                                 <tr>
                                     <th className="px-6 py-4">Estudiante</th>
                                     <th className="px-6 py-4">Email</th>
@@ -467,7 +468,8 @@ const ClassroomDetail = ({ classroom, onBack }) => {
                                     </tr>
                                 ))}
                             </tbody>
-                        </table>
+                            </table>
+                        </div>
                     </div>
                 )}
                 

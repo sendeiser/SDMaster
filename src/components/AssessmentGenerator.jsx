@@ -328,9 +328,14 @@ const AssessmentGenerator = ({ isSidebarOpen, setIsSidebarOpen, session, profile
                 </div>
             )}
 
+            {/* Overlay móvil */}
+            {isSidebarOpen && (
+                <div className="lg:hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40" onClick={() => setIsSidebarOpen(false)} />
+            )}
+
             {/* ── SIDEBAR ─────────────────────────────────────── */}
-            <aside className={`${isSidebarOpen ? 'w-full md:w-[22rem]' : 'w-0'} bg-white border-r border-slate-100 transition-all duration-500 ease-in-out flex flex-col z-40 overflow-hidden flex-shrink-0`}>
-                <div className="p-6 flex-grow overflow-y-auto custom-scrollbar">
+            <aside className={`fixed inset-y-0 left-0 z-50 w-80 bg-white border-r border-slate-100 transition-all duration-500 transform lg:relative lg:translate-x-0 lg:z-10 ${isSidebarOpen ? 'translate-x-0 opacity-100' : '-translate-x-full opacity-0 lg:w-0'}`}>
+                <div className="h-full flex flex-col p-6 overflow-y-auto custom-scrollbar flex-shrink-0">
 
                     {/* Encabezado sidebar */}
                     <div className="flex items-center gap-3 mb-7">
@@ -499,7 +504,7 @@ const AssessmentGenerator = ({ isSidebarOpen, setIsSidebarOpen, session, profile
                                 <div className="flex items-center justify-between mb-8 pb-5 border-b-2 border-brand-700">
                                     <div>
                                         <div className="text-[8px] font-black uppercase tracking-[0.25em] text-brand-600 mb-1">Instrumento de Evaluación</div>
-                                        <h1 className="text-xl font-black text-slate-900 leading-tight">{formData.topic || 'Evaluación Académica'}</h1>
+                                        <h1 className="text-xl lg:text-2xl font-black text-slate-900 leading-tight">{formData.topic || 'Evaluación Académica'}</h1>
                                         <p className="text-xs text-slate-500 mt-1 font-medium">{formData.subject} {formData.year ? `· ${formData.year}` : ''} {formData.type ? `· ${formData.type}` : ''}</p>
                                     </div>
                                     <div className="text-right">
