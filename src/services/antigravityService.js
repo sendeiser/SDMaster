@@ -300,18 +300,96 @@ ${studentResponse}
                 }
             });
             
-            const textResponse = response.response.text();
+            let textResponse = response.response.text();
             
             try {
-                // Parse the JSON response
-                const result = JSON.parse(textResponse);
-                if (result.score === undefined || !result.feedback) {
-                     throw new Error("El modelo no devolvió la estructura JSON requerida");
+                // Strip markdown blocks if present
+                if (textResponse.startsWith('```json')) {
+                    textResponse = textResponse.replace(/^```json/, '').replace(/```$/, '').trim();
+                } else if (textResponse.startsWith('```')) {
+                    textResponse = textResponse.replace(/^```/, '').replace(/```$/, '').trim();
                 }
+
+                if (Array.isArray(result)) result = result[0];
+
+                // --- 1. Score Extraction ---
+                let extractedScore = 1;
+                const scoreKeys = ['score', 'puntuacion_estimada', 'calificacion_estimada', 'puntos', 'calificacion'];
+                
+                const findScore = (obj) => {
+                    for (const key of scoreKeys) {
+                        if (obj[key] !== undefined) return obj[key];
+                    }
+                    if (obj.resumen_desempeno?.calificacion_estimada !== undefined) return obj.resumen_desempeno.calificacion_estimada;
+                    if (obj.evaluacion_tarea?.puntuacion_estimada !== undefined) return obj.evaluacion_tarea.puntuacion_estimada;
+                    return null;
+                };
+                
+                const foundScore = findScore(result);
+                if (foundScore !== null) extractedScore = foundScore;
+
+                // --- 2. Feedback Extraction & Formatting ---
+                let extractedFeedback = "";
+
+                // If LLM actually sent "feedback" as a nice string, prioritize it
+                if (typeof result.feedback === 'string' && result.feedback.length > 10) {
+                    extractedFeedback = result.feedback;
+                } else {
+                    // Build a comprehensive Markdown report from the object
+                    const reportLines = [];
+                    const r = result;
+
+                    // Section: General Overview
+                    const generalObs = r.feedback || r.comentarios_pedagogicos || r.evaluacion_tarea?.comentarios_pedagogicos || r.resumen_desempeno?.observaciones_generales || r.resumen_evaluacion || r.observaciones;
+                    if (generalObs) {
+                        reportLines.push(`### 📝 Observaciones Generales\n${generalObs}`);
+                    }
+
+                    // Section: Performance analysis (by item or general)
+                    const items = r.analisis_por_item || r.analisis_detallado || r.analisis_ejercicios || r.items || r.analisis_de_desempeno;
+                    if (items && Array.isArray(items)) {
+                        reportLines.push(`\n### 🔍 Análisis por Item`);
+                        items.forEach(item => {
+                            const num = item.item || item.id || item.ejercicio || item.pregunta || '?';
+                            const res = item.resultado || item.estado || '';
+                            const comm = item.comentario || item.detalle || item.observacion || '';
+                            reportLines.push(`- **Ejercicio ${num}**: ${res ? `_${res}_` : ''} ${comm}`);
+                        });
+                    } else if (items && typeof items === 'object') {
+                        // Case like "analisis_detallado": { "pregunta_1": { ... } }
+                        reportLines.push(`\n### 🔍 Análisis Detallado`);
+                        Object.entries(items).forEach(([key, val]) => {
+                            const name = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                            const status = val.estado || val.resultado || '';
+                            const errors = val.errores_detallados || val.errores_detectados || [];
+                            reportLines.push(`- **${name}**: ${status ? `_${status}_` : ''}`);
+                            if (Array.isArray(errors)) errors.forEach(e => reportLines.push(`  - ❌ ${e}`));
+                        });
+                    }
+
+                    // Section: Suggestions
+                    const sugs = r.sugerencias_mejora || r.sugerencias_pedagogicas || r.evaluacion_tarea?.sugerencias_mejora || r.sugerencias;
+                    if (sugs) {
+                        reportLines.push(`\n### 💡 Sugerencias de Mejora`);
+                        if (Array.isArray(sugs)) {
+                            sugs.forEach(s => reportLines.push(`- ${s}`));
+                        } else {
+                            reportLines.push(sugs);
+                        }
+                    }
+
+                    extractedFeedback = reportLines.join('\n');
+
+                    // Final fallback if we still have nothing
+                    if (!extractedFeedback.trim()) {
+                        extractedFeedback = typeof r.feedback === 'string' ? r.feedback : "Se generó una evaluación detallada (ver desglose).";
+                    }
+                }
+
                 return {
                     success: true,
-                    score: result.score,
-                    feedback: result.feedback
+                    score: Number(extractedScore) || 1,
+                    feedback: extractedFeedback
                 };
             } catch (parseError) {
                 console.error("Error parseando respuesta JSON del LLM:", textResponse);

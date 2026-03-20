@@ -176,7 +176,10 @@ const ClassroomDetail = ({ classroom, onBack }) => {
         setSelectedSubmission(sub);
         // Pre-fill editable fields with AI suggestions or existing teacher grades
         setEditScore(sub.is_graded ? sub.final_score.toString() : (sub.ai_score_suggested?.toString() || ''));
-        setEditFeedback(sub.is_graded ? (sub.teacher_feedback || '') : (sub.ai_feedback || ''));
+        
+        // Formatear el feedback si es JSON antes de ponerlo en el textarea
+        const initialFeedback = sub.is_graded ? (sub.teacher_feedback || '') : (sub.ai_feedback || '');
+        setEditFeedback(formatAiFeedback(initialFeedback));
     };
 
     const handleSaveGrade = async () => {
@@ -211,6 +214,75 @@ const ClassroomDetail = ({ classroom, onBack }) => {
             alert("Error al guardar la calificación.");
         } finally {
             setIsSavingGrade(false);
+        }
+    };
+
+    const formatAiFeedback = (feedback) => {
+        if (!feedback) return "";
+        try {
+            // Detectamos y extraemos el JSON incluso si tiene texto antes (como "Devolución automática:")
+            let cleanJson = feedback.trim();
+            const firstBrace = cleanJson.indexOf('{');
+            const firstBracket = cleanJson.indexOf('[');
+            const startIdx = (firstBrace !== -1 && (firstBracket === -1 || firstBrace < firstBracket)) ? firstBrace : firstBracket;
+            
+            if (startIdx !== -1) {
+                const lastBrace = cleanJson.lastIndexOf('}');
+                const lastBracket = cleanJson.lastIndexOf(']');
+                const endIdx = Math.max(lastBrace, lastBracket);
+                
+                if (endIdx > startIdx) {
+                    cleanJson = cleanJson.substring(startIdx, endIdx + 1);
+                }
+            } else if (!cleanJson.startsWith("{") && !cleanJson.startsWith("[")) {
+                return feedback; // No es JSON
+            }
+
+            const r = JSON.parse(cleanJson);
+            const reportLines = [];
+            
+            // Section: General Overview
+            const generalObs = r.feedback || r.comentarios_pedagogicos || r.evaluacion_tarea?.comentarios_pedagogicos || r.resumen_desempeno?.observaciones_generales || r.resumen_evaluacion || r.observaciones;
+            if (generalObs) {
+                reportLines.push(`### 📝 Observaciones Generales\n${generalObs}`);
+            }
+
+            // Section: Performance analysis (by item or general)
+            const items = r.analisis_por_item || r.analisis_detallado || r.analisis_ejercicios || r.items || r.analisis_de_desempeno;
+            if (items && Array.isArray(items)) {
+                reportLines.push(`\n### 🔍 Análisis por Item`);
+                items.forEach(item => {
+                    const num = item.item || item.id || item.ejercicio || item.pregunta || '?';
+                    const res = item.resultado || item.estado || '';
+                    const comm = item.comentario || item.detalle || item.observacion || '';
+                    reportLines.push(`- **Ejercicio ${num}**: ${res ? `_${res}_` : ''} ${comm}`);
+                });
+            } else if (items && typeof items === 'object') {
+                reportLines.push(`\n### 🔍 Análisis por Item`);
+                Object.keys(items).forEach(key => {
+                    const item = items[key];
+                    const num = key.replace('ejercicio', '') || '?';
+                    const res = item.resultado || item.estado || '';
+                    const comm = item.comentario || item.detalle || item.observacion || '';
+                    reportLines.push(`- **Ejercicio ${num}**: ${res ? `_${res}_` : ''} ${comm}`);
+                });
+            }
+            
+            // Section: Suggestions
+            const sugs = r.sugerencias_mejora || r.sugerencias_pedagogicas || r.evaluacion_tarea?.sugerencias_mejora || r.sugerencias;
+            if (sugs) {
+                reportLines.push(`\n### 💡 Sugerencias de Mejora`);
+                if (Array.isArray(sugs)) {
+                    sugs.forEach(s => reportLines.push(`- ${s}`));
+                } else {
+                    reportLines.push(sugs);
+                }
+            }
+
+            const finalReport = reportLines.join('\n');
+            return finalReport.trim() || feedback;
+        } catch (err) {
+            return feedback;
         }
     };
 
@@ -282,12 +354,52 @@ const ClassroomDetail = ({ classroom, onBack }) => {
                                         <div className="text-xs text-slate-500 mt-1">Entregado: {new Date(selectedSubmission.submitted_at).toLocaleString()}</div>
                                     </div>
                                     <div className="flex-1 overflow-y-auto p-6 prose prose-slate max-w-none custom-scrollbar">
-                                        <ReactMarkdown 
-                                            remarkPlugins={[remarkGfm, remarkMath]} 
-                                            rehypePlugins={[rehypeKatex, rehypeRaw]}
-                                        >
-                                            {selectedSubmission.content}
-                                        </ReactMarkdown>
+                                        {(() => {
+                                            try {
+                                                const parsed = JSON.parse(selectedSubmission.content);
+                                                if (parsed.responses) {
+                                                    return (
+                                                        <div className="space-y-8">
+                                                            {parsed.extracted_exercises?.map((ex, i) => (
+                                                                <div key={ex.id || i} className="bg-slate-50 p-5 rounded-2xl border border-slate-200">
+                                                                    <div className="text-xs font-bold text-brand-600 uppercase tracking-widest mb-3 border-b border-slate-200 pb-2">Ejercicio {i + 1}</div>
+                                                                    <div className="mb-4 prose prose-sm max-w-none text-slate-700">
+                                                                        <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex, rehypeRaw]}>
+                                                                            {ex.content}
+                                                                        </ReactMarkdown>
+                                                                    </div>
+                                                                    <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm relative mt-6">
+                                                                        <div className="absolute -top-3 left-4 bg-emerald-100 text-emerald-800 text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border border-emerald-200">
+                                                                            Respuesta del Alumno
+                                                                        </div>
+                                                                        <div className="prose prose-sm max-w-none mt-1 text-slate-800 font-medium whitespace-pre-wrap">
+                                                                            <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex, rehypeRaw]}>
+                                                                                {parsed.responses[ex.id] || "*(Sin respuesta)*"}
+                                                                            </ReactMarkdown>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                            {(!parsed.extracted_exercises || parsed.extracted_exercises.length === 0) && (
+                                                                <div className="text-slate-500 italic">No hay ejercicios estructurados.</div>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                }
+                                            } catch (e) {
+                                                // Es texto plano (versión legacy anterior)
+                                            }
+                                            
+                                            // Fallback
+                                            return (
+                                                <ReactMarkdown 
+                                                    remarkPlugins={[remarkGfm, remarkMath]} 
+                                                    rehypePlugins={[rehypeKatex, rehypeRaw]}
+                                                >
+                                                    {selectedSubmission.content}
+                                                </ReactMarkdown>
+                                            );
+                                        })()}
                                     </div>
                                 </div>
 
@@ -305,8 +417,10 @@ const ClassroomDetail = ({ classroom, onBack }) => {
                                                 <span className="text-3xl font-black text-purple-900 leading-none">{selectedSubmission.ai_score_suggested}</span>
                                                 <span className="text-purple-600 font-bold mb-1">/ 10</span>
                                             </div>
-                                            <div className="bg-white/60 p-3 rounded-xl text-sm font-medium text-purple-900/80 prose prose-sm max-w-none">
-                                                <ReactMarkdown>{selectedSubmission.ai_feedback}</ReactMarkdown>
+                                            <div className="bg-white/60 p-3 rounded-xl text-sm font-medium text-purple-900/80 prose prose-sm max-w-none break-words">
+                                                <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex, rehypeRaw]}>
+                                                    {formatAiFeedback(selectedSubmission.ai_feedback)}
+                                                </ReactMarkdown>
                                             </div>
                                         </div>
                                     )}
