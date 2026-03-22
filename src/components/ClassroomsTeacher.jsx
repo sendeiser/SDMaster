@@ -1,21 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Users, BookOpen, Clock, Activity, ChevronRight, X, Copy, Check } from 'lucide-react';
+import { 
+    Plus, Users, BookOpen, Clock, Activity, ChevronRight, X, 
+    Copy, Check, Trash2, GraduationCap, LayoutGrid, Calendar,
+    ExternalLink, AlertCircle
+} from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import ClassroomDetail from './ClassroomDetail';
+import { PremiumButton, PremiumCard, PremiumInput, PremiumToast, PremiumModal } from './shared/PremiumUI';
 
 const ClassroomsTeacher = ({ session, profile }) => {
     const [classrooms, setClassrooms] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isCreating, setIsCreating] = useState(false);
     const [newClassroom, setNewClassroom] = useState({ name: '', description: '' });
-    const [copiedCode, setCopiedCode] = useState(null);
+    const [notification, setNotification] = useState(null);
     const [activeClassroom, setActiveClassroom] = useState(null);
+    const [isDeletingConfirm, setIsDeletingConfirm] = useState(null); // { id, name }
 
     useEffect(() => {
         if (session?.user?.id && profile?.role === 'teacher') {
             loadClassrooms();
         }
     }, [session, profile]);
+
+    const showNotif = (type, message, detail) => setNotification({ type, message, detail });
 
     const loadClassrooms = async () => {
         try {
@@ -34,7 +42,7 @@ const ClassroomsTeacher = ({ session, profile }) => {
             setClassrooms(data || []);
         } catch (error) {
             console.error('Error loading classrooms:', error);
-            alert('Error al cargar las aulas. Por favor intenta recargar la página.');
+            showNotif('error', 'Error al cargar', 'No pudimos obtener tus aulas.');
         } finally {
             setLoading(false);
         }
@@ -50,7 +58,7 @@ const ClassroomsTeacher = ({ session, profile }) => {
     };
 
     const handleCreateClassroom = async (e) => {
-        e.preventDefault();
+        if (e) e.preventDefault();
         try {
             const joinCode = generateJoinCode();
             const { error } = await supabase
@@ -66,22 +74,43 @@ const ClassroomsTeacher = ({ session, profile }) => {
             setIsCreating(false);
             setNewClassroom({ name: '', description: '' });
             loadClassrooms();
+            showNotif('success', '¡Aula creada!', `El aula "${newClassroom.name}" está lista.`);
         } catch (error) {
             console.error('Error creating classroom:', error);
-            alert('Error al crear el aula: ' + error.message);
+            showNotif('error', 'Error al crear', error.message);
+        }
+    };
+
+    const handleDeleteClassroom = async () => {
+        if (!isDeletingConfirm) return;
+        const { id, name } = isDeletingConfirm;
+
+        try {
+            const { error } = await supabase
+                .from('classrooms')
+                .delete()
+                .eq('id', id);
+
+            if (error) throw error;
+            loadClassrooms();
+            showNotif('success', 'Aula eliminada', `Lamentamos que "${name}" ya no esté.`);
+            setIsDeletingConfirm(null);
+        } catch (error) {
+            console.error('Error deleting classroom:', error);
+            showNotif('error', 'Error al eliminar', error.message);
         }
     };
 
     const copyToClipboard = (code) => {
         navigator.clipboard.writeText(code);
-        setCopiedCode(code);
-        setTimeout(() => setCopiedCode(null), 2000);
+        showNotif('success', 'Código copiado', `El código ${code} está en tu portapapeles.`);
     };
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center h-64">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-500"></div>
+            <div className="flex flex-col items-center justify-center h-64 animate-pulse">
+                <div className="w-12 h-12 border-4 border-brand-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Cargando tus aulas...</p>
             </div>
         );
     }
@@ -92,170 +121,212 @@ const ClassroomsTeacher = ({ session, profile }) => {
                 classroom={activeClassroom} 
                 onBack={() => {
                     setActiveClassroom(null);
-                    loadClassrooms(); // Recargar datos al volver (para actualizar stats)
+                    loadClassrooms(); 
                 }} 
             />
         );
     }
 
     return (
-        <div className="max-w-6xl mx-auto space-y-6 sm:space-y-8 p-4 sm:p-0">
-            {/* Encabezado */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="max-w-7xl mx-auto space-y-10 animate-fade-in pb-20">
+            
+            {notification && (
+                <PremiumToast 
+                    type={notification.type} 
+                    message={notification.message} 
+                    detail={notification.detail} 
+                    onDismiss={() => setNotification(null)} 
+                />
+            )}
+
+            {/* Header Area */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
                 <div>
-                    <h1 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight">Mis Aulas</h1>
-                    <p className="text-xs sm:text-sm text-slate-500 mt-1 sm:mt-2 font-medium">
-                        Administra tus clases, invita estudiantes y asigna actividades.
+                    <div className="flex items-center gap-2 mb-2">
+                        <div className="p-2 bg-brand-100 text-brand-600 rounded-lg">
+                            <GraduationCap size={18} />
+                        </div>
+                        <span className="text-[10px] font-black text-brand-600 uppercase tracking-widest leading-none">Gestión Académica</span>
+                    </div>
+                    <h1 className="text-4xl font-black text-slate-900 tracking-tight">Mis <span className="text-brand-600">Aulas</span></h1>
+                    <p className="text-slate-500 font-medium mt-2 max-w-xl">
+                        Centraliza tus clases, gestiona la participación de tus estudiantes y realiza un seguimiento detallado de cada actividad.
                     </p>
                 </div>
-                <button
+                <PremiumButton 
                     onClick={() => setIsCreating(true)}
-                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-brand-500 hover:bg-brand-600 text-white rounded-xl font-bold transition-all shadow-sm hover:shadow-brand-500/25 active:scale-95 whitespace-nowrap"
+                    icon={<Plus size={20} />}
+                    className="w-full md:w-auto !rounded-2xl !py-4 shadow-xl shadow-brand-500/20"
                 >
-                    <Plus size={20} />
-                    Crear Aula
-                </button>
+                    Nueva Aula
+                </PremiumButton>
             </div>
 
-            {/* Lista de Aulas */}
+            {/* Main Grid */}
             {classrooms.length === 0 ? (
-                <div className="bg-white rounded-3xl p-12 text-center border border-slate-100 shadow-sm">
-                    <div className="w-24 h-24 bg-brand-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <Users className="text-brand-500" size={40} />
+                <div className="bg-white rounded-[3rem] p-16 text-center border border-slate-100 shadow-xl shadow-slate-200/50 max-w-3xl mx-auto animate-scale-up">
+                    <div className="w-24 h-24 bg-brand-50 text-brand-500 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-inner">
+                        <Users size={40} />
                     </div>
-                    <h3 className="text-2xl font-black text-slate-800 mb-3">Aún no tienes aulas</h3>
-                    <p className="text-slate-500 max-w-md mx-auto mb-8 font-medium">
-                        Crea tu primera aula para generar un código de acceso que tus estudiantes usarán para unirse a tus clases.
+                    <h3 className="text-3xl font-black text-slate-800 mb-4 tracking-tight">Comienza tu viaje académico</h3>
+                    <p className="text-slate-500 max-w-md mx-auto mb-10 font-medium leading-relaxed">
+                        Crea tu primera aula virtual para empezar a asignar actividades potenciadas por Inteligencia Artificial y conectar con tus alumnos.
                     </p>
-                    <button
+                    <PremiumButton
                         onClick={() => setIsCreating(true)}
-                        className="inline-flex items-center gap-2 px-6 py-3 bg-brand-50 text-brand-600 hover:bg-brand-100 font-bold rounded-xl transition-colors"
+                        icon={<Plus size={20} />}
+                        className="mx-auto"
                     >
-                        <Plus size={20} />
                         Crear mi primera aula
-                    </button>
+                    </PremiumButton>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
                     {classrooms.map((classroom) => (
-                        <div key={classroom.id} className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden flex flex-col transition-all hover:shadow-md hover:border-brand-200 group">
-                            {/* Cabecera Tarjeta */}
-                            <div className="p-6 border-b border-slate-50 bg-gradient-to-br from-white to-slate-50/50">
-                                <div className="flex justify-between items-start mb-4">
-                                    <h3 className="text-lg font-black text-slate-800 group-hover:text-brand-600 transition-colors line-clamp-2">
+                        <div key={classroom.id} className="group animate-scale-up">
+                            <PremiumCard noPadding className="h-full flex flex-col hover:border-brand-300 transform transition-all hover:-translate-y-1">
+                                <div className="p-8 border-b border-slate-50 bg-gradient-to-br from-white to-slate-50/50 flex-grow">
+                                    <div className="flex justify-between items-start mb-6">
+                                        <div className="w-12 h-12 bg-slate-100 text-slate-400 rounded-2xl flex items-center justify-center group-hover:bg-brand-100 group-hover:text-brand-600 transition-colors">
+                                            <BookOpen size={24} />
+                                        </div>
+                                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button 
+                                                onClick={() => copyToClipboard(classroom.join_code)}
+                                                className="p-2 text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all"
+                                                title="Copiar Código"
+                                            >
+                                                <Copy size={18} />
+                                            </button>
+                                            <button 
+                                                onClick={() => setIsDeletingConfirm({ id: classroom.id, name: classroom.name })}
+                                                className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
+                                                title="Eliminar Aula"
+                                            >
+                                                <Trash2 size={18} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    <h3 className="text-2xl font-black text-slate-900 group-hover:text-brand-600 transition-colors line-clamp-2 leading-tight mb-2">
                                         {classroom.name}
                                     </h3>
+                                    
+                                    {classroom.description && (
+                                        <p className="text-sm text-slate-500 font-medium line-clamp-2 mb-6 min-h-[2.5rem]">
+                                            {classroom.description}
+                                        </p>
+                                    )}
+                                    
+                                    <div className="inline-flex items-center gap-3 px-4 py-2 bg-white border border-slate-100 rounded-2xl shadow-sm">
+                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Código</span>
+                                        <span className="font-mono font-black text-brand-600 tracking-[0.2em] text-lg">{classroom.join_code}</span>
+                                    </div>
                                 </div>
-                                {classroom.description && (
-                                    <p className="text-sm text-slate-500 font-medium line-clamp-2 mb-4">
-                                        {classroom.description}
-                                    </p>
-                                )}
                                 
-                                <div className="flex items-center gap-2 mt-auto">
-                                    <div className="bg-slate-100 px-3 py-1.5 rounded-lg flex items-center gap-2 border border-slate-200">
-                                        <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Código:</span>
-                                        <span className="font-mono font-black text-brand-600 tracking-widest">{classroom.join_code}</span>
+                                <div className="grid grid-cols-2 divide-x divide-slate-100 bg-slate-50/30 p-2">
+                                    <div className="p-4 flex flex-col items-center">
+                                        <div className="flex items-center gap-1.5 text-slate-400 mb-1">
+                                            <Users size={14} />
+                                            <span className="text-[9px] font-black uppercase tracking-widest">Alumnos</span>
+                                        </div>
+                                        <span className="text-2xl font-black text-slate-800">{classroom.classroom_students?.[0]?.count || 0}</span>
                                     </div>
-                                    <button 
-                                        onClick={() => copyToClipboard(classroom.join_code)}
-                                        className="p-1.5 text-slate-400 hover:text-brand-500 hover:bg-brand-50 rounded-md transition-colors"
-                                        title="Copiar Código"
-                                    >
-                                        {copiedCode === classroom.join_code ? <Check size={18} className="text-emerald-500" /> : <Copy size={18} />}
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            {/* Stats Tarjeta */}
-                            <div className="grid grid-cols-2 divide-x divide-slate-50 bg-white">
-                                <div className="p-4 flex flex-col items-center justify-center text-center">
-                                    <div className="flex items-center gap-1.5 text-slate-400 mb-1">
-                                        <Users size={14} />
-                                        <span className="text-[10px] font-bold uppercase tracking-wider">Estudiantes</span>
+                                    <div className="p-4 flex flex-col items-center">
+                                        <div className="flex items-center gap-1.5 text-slate-400 mb-1">
+                                            <Activity size={14} />
+                                            <span className="text-[9px] font-black uppercase tracking-widest">Tareas</span>
+                                        </div>
+                                        <span className="text-2xl font-black text-slate-800">{classroom.classroom_assignments?.[0]?.count || 0}</span>
                                     </div>
-                                    <span className="text-xl font-black text-slate-700">{classroom.classroom_students?.[0]?.count || 0}</span>
                                 </div>
-                                <div className="p-4 flex flex-col items-center justify-center text-center">
-                                    <div className="flex items-center gap-1.5 text-slate-400 mb-1">
-                                        <Activity size={14} />
-                                        <span className="text-[10px] font-bold uppercase tracking-wider">Actividades</span>
-                                    </div>
-                                    <span className="text-xl font-black text-slate-700">{classroom.classroom_assignments?.[0]?.count || 0}</span>
-                                </div>
-                            </div>
-                            
-                            {/* Botón Acción */}
-                            <button 
-                                onClick={() => setActiveClassroom(classroom)}
-                                className="p-4 flex items-center justify-center gap-2 text-sm font-bold text-slate-500 hover:text-brand-600 hover:bg-brand-50 transition-colors border-t border-slate-50 mt-auto"
-                            >
-                                Entrar al Aula
-                                <ChevronRight size={16} />
-                            </button>
+                                
+                                <button 
+                                    onClick={() => setActiveClassroom(classroom)}
+                                    className="p-6 flex items-center justify-center gap-3 text-sm font-black uppercase tracking-widest text-slate-500 hover:text-white hover:bg-slate-900 transition-all border-t border-slate-100 rounded-b-[inherit]"
+                                >
+                                    Abrir Panel
+                                    <ExternalLink size={16} />
+                                </button>
+                            </PremiumCard>
                         </div>
                     ))}
                 </div>
             )}
 
             {/* Modal Crear Aula */}
-            {isCreating && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                        <div className="p-6 border-b border-slate-100 flex justify-between items-center">
-                            <h2 className="text-xl font-black text-slate-800 flex items-center gap-2">
-                                <Plus className="text-brand-500" />
-                                Crear Nueva Aula
-                            </h2>
-                            <button
-                                onClick={() => setIsCreating(false)}
-                                className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-2 rounded-full transition-colors"
-                            >
-                                <X size={20} />
-                            </button>
-                        </div>
-                        <form onSubmit={handleCreateClassroom} className="p-6 space-y-6">
-                            <div>
-                                <label className="block text-sm font-bold text-slate-700 mb-2">Nombre del Aula</label>
-                                <input
-                                    type="text"
-                                    value={newClassroom.name}
-                                    onChange={(e) => setNewClassroom({ ...newClassroom, name: e.target.value })}
-                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all font-medium"
-                                    placeholder="Ej. Matemática 5° A"
-                                    required
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-bold text-slate-700 mb-2">Descripción (Opcional)</label>
-                                <textarea
-                                    value={newClassroom.description}
-                                    onChange={(e) => setNewClassroom({ ...newClassroom, description: e.target.value })}
-                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all font-medium resize-none"
-                                    placeholder="Ej. Ciclo lectivo 2026 - Turno Mañana"
-                                    rows="3"
-                                />
-                            </div>
-                            <div className="pt-2 flex gap-3">
-                                <button
-                                    type="button"
-                                    onClick={() => setIsCreating(false)}
-                                    className="flex-1 px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors"
-                                >
-                                    Cancelar
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={!newClassroom.name.trim()}
-                                    className="flex-1 px-4 py-3 bg-brand-500 hover:bg-brand-600 text-white font-bold rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    Crear Aula
-                                </button>
-                            </div>
-                        </form>
+            <PremiumModal 
+                isOpen={isCreating} 
+                onClose={() => setIsCreating(false)}
+                title="Nueva Aula Virtual"
+                footer={(
+                    <div className="flex gap-4">
+                        <PremiumButton variant="secondary" onClick={() => setIsCreating(false)} className="flex-1">Cancelar</PremiumButton>
+                        <PremiumButton 
+                            onClick={handleCreateClassroom} 
+                            disabled={!newClassroom.name.trim()} 
+                            className="flex-1"
+                        >
+                            Crear Aula
+                        </PremiumButton>
+                    </div>
+                )}
+            >
+                <div className="space-y-6">
+                    <div className="p-4 bg-brand-50 border border-brand-100 rounded-2xl flex gap-3 items-start">
+                        <AlertCircle className="text-brand-500 mt-0.5" size={18} />
+                        <p className="text-xs text-brand-800 font-medium leading-relaxed">
+                            Al crear un aula obtendrás un código único. Compártelo con tus alumnos para que puedan unirse y ver las actividades.
+                        </p>
+                    </div>
+                    
+                    <PremiumInput 
+                        label="Nombre del Aula" 
+                        value={newClassroom.name}
+                        onChange={(e) => setNewClassroom({ ...newClassroom, name: e.target.value })}
+                        placeholder="Ej. Historia 5° Año - División B"
+                        icon={<Users size={12} />}
+                    />
+                    
+                    <div className="space-y-1.5 group">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1 group-focus-within:text-brand-600 transition-colors flex items-center gap-1">
+                            Descripción / Comentarios
+                        </label>
+                        <textarea
+                            value={newClassroom.description}
+                            onChange={(e) => setNewClassroom({ ...newClassroom, description: e.target.value })}
+                            className="w-full rounded-xl border border-slate-200 bg-white/70 py-3 px-4 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-4 focus:ring-brand-500/10 focus:border-brand-500 transition-all placeholder:text-slate-300 shadow-sm resize-none"
+                            placeholder="Información adicional para tus alumnos..."
+                            rows="4"
+                        />
                     </div>
                 </div>
-            )}
+            </PremiumModal>
+
+            {/* Modal Confirmar Eliminación */}
+            <PremiumModal 
+                isOpen={!!isDeletingConfirm} 
+                onClose={() => setIsDeletingConfirm(null)}
+                title="¿Eliminar Aula?"
+                maxWidth="max-w-md"
+            >
+                <div className="space-y-6 text-center py-4">
+                    <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-[2rem] flex items-center justify-center mx-auto mb-6">
+                        <Trash2 size={32} />
+                    </div>
+                    <div>
+                        <h3 className="text-xl font-black text-slate-900 mb-2">Acción Irreversible</h3>
+                        <p className="text-sm text-slate-500 font-medium leading-relaxed">
+                            Estás por eliminar el aula <span className="text-slate-900 font-black">"{isDeletingConfirm?.name}"</span>. 
+                            Se perderán todas las notas, entregas y registros de los alumnos.
+                        </p>
+                    </div>
+                    <div className="flex gap-4 pt-4">
+                        <PremiumButton variant="secondary" onClick={() => setIsDeletingConfirm(null)} className="flex-1">Conservar Aula</PremiumButton>
+                        <PremiumButton onClick={handleDeleteClassroom} className="flex-1 !bg-rose-500 hover:!bg-rose-600 shadow-rose-200">Eliminar Aula</PremiumButton>
+                    </div>
+                </div>
+            </PremiumModal>
         </div>
     );
 };

@@ -1,6 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { sequenceDbService } from '../lib/sequenceDbService';
-import { FolderHeart, Clock, Search, BookOpen, Loader2, Trash2, Globe, Lock, ClipboardCheck, Users, Calendar, X } from 'lucide-react';
+import { 
+    FolderHeart, Clock, Search as SearchIcon, BookOpen, Loader2, Trash2, 
+    Globe as GlobeIcon, Lock as LockIcon, ClipboardCheck, Users, Calendar, X, 
+    Filter, LayoutGrid, List, MoreVertical, Share2,
+    Eye, Edit3, Trash, AlertCircle, ChevronRight
+} from 'lucide-react';
+import { 
+    PremiumButton, PremiumCard, PremiumInput, 
+    PremiumToast, PremiumTabs, PremiumModal 
+} from './shared/PremiumUI';
 
 const MySequences = ({ session, onLoadSequence, onLoadAssessment }) => {
     const [activeTab, setActiveTab] = useState('secuencias'); // 'secuencias' | 'evaluaciones'
@@ -9,6 +18,7 @@ const MySequences = ({ session, onLoadSequence, onLoadAssessment }) => {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [isDeleting, setIsDeleting] = useState(null);
+    const [notification, setNotification] = useState(null);
 
     // Modal Asignación
     const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
@@ -26,6 +36,8 @@ const MySequences = ({ session, onLoadSequence, onLoadAssessment }) => {
         }
     }, [session]);
 
+    const showNotif = (type, message, detail) => setNotification({ type, message, detail });
+
     const loadAllData = async () => {
         setLoading(true);
         try {
@@ -36,45 +48,42 @@ const MySequences = ({ session, onLoadSequence, onLoadAssessment }) => {
             setSequences(seqs || []);
             setAssessments(evals || []);
         } catch (error) {
-            console.error("Error cargando repositorio:", error);
+            console.error("Error loading repository:", error);
+            showNotif('error', 'Error de Carga', 'No pudimos sincronizar tu repositorio personal.');
         } finally {
             setLoading(false);
         }
     };
 
     const openAssignModal = async (item, e) => {
-        e.stopPropagation();
+        if (e) e.stopPropagation();
         setItemToAssign(item);
         setIsAssignModalOpen(true);
         try {
             const rooms = await sequenceDbService.getTeacherClassrooms();
             setClassrooms(rooms || []);
         } catch (error) {
-            console.error("Error cargando aulas:", error);
+            console.error("Error loading classrooms:", error);
         }
     };
 
     const handleAssign = async (e) => {
-        e.preventDefault();
+        if (e) e.preventDefault();
         if (!selectedClassroom || !itemToAssign) return;
 
         setIsAssigning(true);
         try {
             const itemType = activeTab === 'secuencias' ? 'sequence' : 'assessment';
-            
-            // Format due_date to ISO if provided
             let finalDueDate = null;
-            if (dueDate) {
-                finalDueDate = new Date(dueDate).toISOString();
-            }
+            if (dueDate) finalDueDate = new Date(dueDate).toISOString();
 
             await sequenceDbService.assignToClassroom(selectedClassroom, itemToAssign, itemType, finalDueDate);
-            alert(`¡Actividad "${itemToAssign.topic}" asignada con éxito al aula!`);
+            showNotif('success', '¡Asignado!', `"${itemToAssign.topic}" ya está disponible en el aula seleccionada.`);
             setIsAssignModalOpen(false);
             setDueDate('');
             setSelectedClassroom('');
         } catch (error) {
-            alert('Error al asignar al aula: ' + error.message);
+            showNotif('error', 'Error al asignar', error.message);
         } finally {
             setIsAssigning(false);
             setItemToAssign(null);
@@ -82,7 +91,8 @@ const MySequences = ({ session, onLoadSequence, onLoadAssessment }) => {
     };
 
     const handleDelete = async (id, e) => {
-        e.stopPropagation();
+        if (e) e.stopPropagation();
+        // Standard confirm for now, maybe PremiumModal later
         if (!window.confirm(`¿Seguro que deseas eliminar esta ${activeTab === 'secuencias' ? 'secuencia' : 'evaluación'} permanentemente?`)) return;
 
         setIsDeleting(id);
@@ -94,15 +104,16 @@ const MySequences = ({ session, onLoadSequence, onLoadAssessment }) => {
                 await sequenceDbService.deleteAssessment(id);
                 setAssessments(prev => prev.filter(item => item.id !== id));
             }
+            showNotif('success', 'Eliminado', 'El item ha sido removido de tu repositorio.');
         } catch (error) {
-            console.error("Error al eliminar", error);
+            showNotif('error', 'Error al eliminar', error.message);
         } finally {
             setIsDeleting(null);
         }
     };
 
     const toggleVisibility = async (id, currentVisibility, e) => {
-        e.stopPropagation();
+        if (e) e.stopPropagation();
         try {
             if (activeTab === 'secuencias') {
                 await sequenceDbService.toggleVisibility(id, !currentVisibility);
@@ -115,21 +126,26 @@ const MySequences = ({ session, onLoadSequence, onLoadAssessment }) => {
                     evalu.id === id ? { ...evalu, is_public: !currentVisibility } : evalu
                 ));
             }
+            showNotif('info', 'Visibilidad Actualizada', `Ahora tu contenido es ${!currentVisibility ? 'Público' : 'Privado'}.`);
         } catch (error) {
-            console.error("Error cambiando visibilidad", error);
+            showNotif('error', 'Error', 'No se pudo cambiar la visibilidad.');
         }
     };
 
     if (!session) {
         return (
-            <div className="flex-grow flex items-center justify-center p-8 bg-slate-50">
-                <div className="text-center">
-                    <div className="w-20 h-20 bg-brand-100 rounded-full flex items-center justify-center mx-auto mb-6 text-brand-600">
-                        <FolderHeart size={40} />
-                    </div>
-                    <h2 className="text-2xl font-black text-slate-900 tracking-tight">Acceso Restringido</h2>
-                    <p className="text-slate-500 font-medium mt-2 max-w-sm">Inicia sesión para gestionar tus propias secuencias y decidir cuáles compartir con la comunidad.</p>
+            <div className="flex flex-col items-center justify-center p-20 text-center animate-fade-in">
+                <div className="w-24 h-24 bg-slate-50 text-slate-200 rounded-[2.5rem] flex items-center justify-center mb-8">
+                    <LockIcon size={40} />
                 </div>
+                <h2 className="text-3xl font-black text-slate-900 tracking-tight">Acceso Privado</h2>
+                <p className="text-slate-500 font-medium mt-4 max-w-sm mx-auto leading-relaxed">
+                    Inicia sesión para gestionar tus propias secuencias didácticas y evaluaciones. 
+                    Tus creaciones son seguras y siempre accesibles para vos.
+                </p>
+                <PremiumButton onClick={() => window.location.reload()} className="mt-10 !rounded-2xl">
+                    Volver al Inicio
+                </PremiumButton>
             </div>
         );
     }
@@ -141,208 +157,241 @@ const MySequences = ({ session, onLoadSequence, onLoadAssessment }) => {
         (item.subject || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-
+    const tabs = [
+        { id: 'secuencias', label: 'Secuencias Didácticas', icon: <FolderHeart size={16}/> },
+        { id: 'evaluaciones', label: 'Evaluaciones & Test', icon: <ClipboardCheck size={16}/> }
+    ];
 
     return (
-        <div className="flex-grow p-8 bg-slate-50 overflow-y-auto custom-scrollbar flex justify-center">
-            <div className="w-full max-w-5xl">
-                <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
-                    <div>
-                        <div className="flex items-center space-x-3 mb-2">
-                            <div className="w-10 h-10 bg-brand-100 rounded-xl flex items-center justify-center text-brand-600">
-                                <FolderHeart size={20} />
-                            </div>
-                            <h2 className="text-2xl font-black text-slate-900 tracking-tight">Mi Repositorio</h2>
-                        </div>
-                        <p className="text-slate-500 font-medium">Gestiona tu repositorio personal. Puedes cambiar la visibilidad o eliminarlas.</p>
-                        
-                        <div className="flex bg-slate-200/50 p-1 rounded-xl w-fit mt-6">
-                            <button
-                                onClick={() => setActiveTab('secuencias')}
-                                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'secuencias' ? 'bg-white text-brand-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                            >
-                                <FolderHeart size={16} />
-                                Secuencias Didácticas
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('evaluaciones')}
-                                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'evaluaciones' ? 'bg-white text-purple-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                            >
-                                <ClipboardCheck size={16} />
-                                Evaluaciones
-                            </button>
-                        </div>
-                    </div>
+        <div className="max-w-7xl mx-auto space-y-10 animate-fade-in pb-20">
+            {notification && (
+                <PremiumToast 
+                    type={notification.type} 
+                    message={notification.message} 
+                    detail={notification.detail} 
+                    onDismiss={() => setNotification(null)} 
+                />
+            )}
 
-                    <div className="relative w-full md:w-72">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                            <Search size={16} />
+            {/* Header / Intro */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+                <div className="space-y-2">
+                    <div className="flex items-center gap-2 mb-2">
+                        <div className="p-2 bg-brand-100 text-brand-600 rounded-lg">
+                            <FolderHeart size={18} />
                         </div>
-                        <input
-                            type="text"
-                            placeholder="Buscar por tema o materia..."
-                            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all shadow-sm"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Repositorio Personal</span>
                     </div>
+                    <h1 className="text-4xl font-black text-slate-900 tracking-tight">Mi Patrimonio <span className="text-brand-600">Académico</span></h1>
+                    <p className="text-slate-500 font-medium mt-2 max-w-xl">
+                        Gestiona, organiza y despliega tu contenido directamente a tus aulas. 
+                        Decí qué materiales querés compartir con la comunidad global.
+                    </p>
                 </div>
 
-                {loading ? (
-                    <div className="flex flex-col items-center justify-center py-20 space-y-4">
-                        <Loader2 size={32} className="animate-spin text-brand-500" />
-                        <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Cargando repositorio...</p>
-                    </div>
-                ) : filteredItems.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {filteredItems.map(item => (
-                            <div key={item.id} className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm hover:shadow-xl hover:border-brand-200 transition-all group flex flex-col relative overflow-hidden">
-                                <div className="flex items-start justify-between mb-4">
-                                    <span className={`px-2.5 py-1 ${activeTab === 'evaluaciones' ? 'bg-purple-50 text-purple-600' : 'bg-brand-50 text-brand-600'} rounded-lg text-xs font-black uppercase tracking-wider`}>
-                                        {item.subject || 'Sin Materia'}
-                                    </span>
-                                    <div className="flex items-center text-slate-300 text-xs font-bold">
-                                        <Clock size={12} className="mr-1" />
-                                        {new Date(item.created_at).toLocaleDateString()}
-                                    </div>
-                                </div>
-
-                                <h3 className={`text-lg font-black text-slate-800 leading-tight mb-2 ${activeTab === 'evaluaciones' ? 'group-hover:text-purple-600' : 'group-hover:text-brand-600'} transition-colors line-clamp-2`}>
-                                    {item.topic || 'Tema sin título'}
-                                </h3>
-                                <p className="text-sm text-slate-500 font-medium mb-6">
-                                    Año/Curso: {item.year || 'No especificado'}
-                                </p>
-
-                                <div className="mt-auto flex gap-2">
-                                    <button
-                                        onClick={() => activeTab === 'secuencias' ? onLoadSequence(item) : onLoadAssessment(item)}
-                                        className={`flex-grow py-2.5 bg-slate-50 hover:text-white rounded-xl text-sm font-bold transition-all flex items-center justify-center space-x-2 group-hover:shadow-md ${activeTab === 'evaluaciones' ? 'hover:bg-purple-600 text-slate-600' : 'hover:bg-brand-600 text-slate-600'}`}
-                                        title="Ver en Editor"
-                                    >
-                                        <BookOpen size={16} />
-                                    </button>
-                                    <button
-                                        title="Asignar a Aula"
-                                        onClick={(e) => openAssignModal(item, e)}
-                                        className="flex-grow py-2.5 bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-600 rounded-xl text-sm font-bold transition-all flex items-center justify-center space-x-2 group-hover:shadow-md"
-                                    >
-                                        <Users size={16} />
-                                    </button>
-                                    <button
-                                        title={item.is_public ? "Hacer Privado" : "Hacer Público"}
-                                        onClick={(e) => toggleVisibility(item.id, item.is_public, e)}
-                                        className={`w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-xl transition-all ${item.is_public ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}
-                                    >
-                                        {item.is_public ? <Globe size={16} /> : <Lock size={16} />}
-                                    </button>
-                                    <button
-                                        title="Eliminar permanentemente"
-                                        onClick={(e) => handleDelete(item.id, e)}
-                                        className="w-10 h-10 flex-shrink-0 flex items-center justify-center bg-red-50 text-red-500 hover:bg-red-500 hover:text-white rounded-xl transition-all"
-                                    >
-                                        {isDeleting === item.id ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
-                                    </button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                ) : (
-                    <div className="flex flex-col items-center justify-center py-20 opacity-50">
-                        {activeTab === 'evaluaciones' ? <ClipboardCheck size={48} className="text-slate-300 mb-4" /> : <FolderHeart size={48} className="text-slate-300 mb-4" />}
-                        <h3 className="text-lg font-black text-slate-800 mb-1">Aún no tienes {activeTab === 'secuencias' ? 'secuencias' : 'evaluaciones'}</h3>
-                        <p className="text-sm font-medium text-slate-500">Acude al Generador y guarda algunas {activeTab === 'secuencias' ? 'secuencias' : 'evaluaciones'} en tu repositorio en la nube.</p>
-                    </div>
-                )}
+                <div className="w-full md:w-auto flex flex-col sm:flex-row gap-4">
+                    <PremiumInput 
+                        placeholder="Buscar por tema..." 
+                        icon={<SearchIcon size={16}/>}
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="!w-full sm:!w-72"
+                    />
+                </div>
             </div>
 
-            {/* Modal de Asignación */}
-            {isAssignModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                        <div className="p-6 border-b border-slate-100 flex justify-between items-center">
-                            <h2 className="text-xl font-black text-slate-800 flex items-center gap-2">
-                                <Users className="text-indigo-500" />
-                                Asignar a Aula
-                            </h2>
-                            <button
-                                onClick={() => { setIsAssignModalOpen(false); setItemToAssign(null); }}
-                                className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-2 rounded-full transition-colors"
-                            >
-                                <X size={20} />
-                            </button>
-                        </div>
-                        
-                        <form onSubmit={handleAssign} className="p-6 space-y-6">
-                            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                                    Actividad a asignar:
-                                </span>
-                                <h3 className="font-black text-slate-800 leading-tight">
-                                    {itemToAssign?.topic || 'Sin título'}
-                                </h3>
-                                <div className="text-sm font-medium text-slate-500 mt-1">
-                                    {itemToAssign?.subject}
+            {/* Tabs Control */}
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6 border-b border-slate-100 pb-4">
+                <PremiumTabs 
+                    tabs={tabs} 
+                    activeTab={activeTab} 
+                    setActiveTab={setActiveTab} 
+                />
+                <div className="flex bg-slate-50 p-1 rounded-xl border border-slate-100">
+                    <button className="p-2 text-brand-600 bg-white shadow-sm rounded-lg"><LayoutGrid size={18}/></button>
+                    <button className="p-2 text-slate-400 hover:text-slate-600 transition-colors"><List size={18}/></button>
+                </div>
+            </div>
+
+            {/* Content Grid */}
+            {loading ? (
+                <div className="flex flex-col items-center justify-center py-24 space-y-6">
+                    <div className="w-12 h-12 border-4 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
+                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Sincronizando archivos...</p>
+                </div>
+            ) : filteredItems.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    {filteredItems.map(item => (
+                        <PremiumCard 
+                            key={item.id} 
+                            noPadding 
+                            className="group flex flex-col h-full hover:shadow-2xl hover:shadow-slate-200/50 transition-all duration-500 border-transparent hover:border-slate-100"
+                        >
+                            {/* Card Header Illustration-ish */}
+                            <div className={`h-24 w-full relative overflow-hidden transition-all duration-500 ${
+                                activeTab === 'secuencias' ? 'bg-brand-50' : 'bg-purple-50'
+                            }`}>
+                                <div className="absolute top-4 left-6 flex items-center gap-2">
+                                    <span className={`text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg shadow-sm ${
+                                        activeTab === 'secuencias' ? 'bg-white text-brand-700' : 'bg-white text-purple-700'
+                                    }`}>
+                                        {item.subject || 'S/M'}
+                                    </span>
+                                    <span className="text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg bg-slate-900 text-white shadow-sm">
+                                        {item.year || 'CURSO'}
+                                    </span>
+                                </div>
+                                <div className="absolute -right-4 -bottom-4 opacity-5 group-hover:opacity-10 transition-opacity duration-500">
+                                    {activeTab === 'secuencias' ? <FolderHeart size={100}/> : <ClipboardCheck size={100}/>}
                                 </div>
                             </div>
 
-                            <div>
-                                <label className="block text-sm font-bold text-slate-700 mb-2">Seleccionar Aula</label>
-                                {classrooms.length === 0 ? (
-                                    <div className="text-sm text-amber-600 bg-amber-50 p-3 rounded-xl border border-amber-100 font-medium">
-                                        No tienes aulas creadas. Únete o crea una en la pestaña "Mis Aulas" primero.
+                            <div className="p-8 flex-1 flex flex-col">
+                                <h3 className="text-xl font-bold text-slate-900 tracking-tight leading-snug mb-3 group-hover:text-brand-600 transition-colors line-clamp-2">
+                                    {item.topic || 'Sin título'}
+                                </h3>
+                                
+                                <div className="flex items-center gap-4 text-xs font-bold text-slate-400 mb-8 mt-auto pt-4 border-t border-slate-50">
+                                    <div className="flex items-center gap-1.5">
+                                        <Calendar size={14} className="opacity-50"/>
+                                        {new Date(item.created_at).toLocaleDateString(undefined, { day: '2-digit', month: 'short' })}
                                     </div>
-                                ) : (
-                                    <select
-                                        value={selectedClassroom}
-                                        onChange={(e) => setSelectedClassroom(e.target.value)}
-                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all font-medium text-slate-700"
-                                        required
+                                    <div className={`flex items-center gap-1.5 ${item.is_public ? 'text-emerald-500' : 'text-slate-300'}`}>
+                                        {item.is_public ? <GlobeIcon size={14}/> : <LockIcon size={14}/>}
+                                        {item.is_public ? 'Público' : 'Solo Yo'}
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                    <PremiumButton 
+                                        onClick={() => activeTab === 'secuencias' ? onLoadSequence(item) : onLoadAssessment(item)}
+                                        variant="secondary"
+                                        className="!px-0 !w-12 !h-12 !rounded-2xl"
+                                        title="Editar y Visualizar"
                                     >
-                                        <option value="">Selecciona un aula...</option>
-                                        {classrooms.map(c => (
-                                            <option key={c.id} value={c.id}>
-                                                {c.name} {c.description ? `(${c.description})` : ''}
-                                            </option>
-                                        ))}
-                                    </select>
-                                )}
-                            </div>
+                                        <Eye size={18}/>
+                                    </PremiumButton>
+                                    
+                                    <PremiumButton 
+                                        onClick={(e) => openAssignModal(item, e)}
+                                        className="flex-1 !rounded-2xl !py-3 shadow-lg shadow-brand-500/10"
+                                        icon={<Users size={16}/>}
+                                    >
+                                        Asignar
+                                    </PremiumButton>
 
-                            <div>
-                                <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
-                                    <Calendar size={16} className="text-slate-400" />
-                                    Fecha límite (Opcional)
-                                </label>
-                                <input
-                                    type="datetime-local"
-                                    value={dueDate}
-                                    onChange={(e) => setDueDate(e.target.value)}
-                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all font-medium text-slate-700"
-                                />
-                                <p className="text-xs text-slate-500 mt-1.5 font-medium">Dejar en blanco para tareas sin fecha de entrega.</p>
-                            </div>
+                                    <div className="h-10 w-[1px] bg-slate-100 mx-1"></div>
 
-                            <div className="pt-2 flex gap-3">
-                                <button
-                                    type="button"
-                                    onClick={() => { setIsAssignModalOpen(false); setItemToAssign(null); }}
-                                    className="flex-1 px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors"
-                                >
-                                    Cancelar
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={!selectedClassroom || isAssigning || classrooms.length === 0}
-                                    className="flex-1 px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    {isAssigning ? <Loader2 size={18} className="animate-spin" /> : 'Asignar Tarea'}
-                                </button>
+                                    <button 
+                                        onClick={(e) => toggleVisibility(item.id, item.is_public, e)}
+                                        className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
+                                            item.is_public ? 'bg-emerald-50 text-emerald-500 hover:bg-emerald-100' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'
+                                        }`}
+                                        title={item.is_public ? "Hacer Privado" : "Hacer Público"}
+                                    >
+                                        {item.is_public ? <GlobeIcon size={18}/> : <LockIcon size={18}/>}
+                                    </button>
+
+                                    <button 
+                                        onClick={(e) => handleDelete(item.id, e)}
+                                        disabled={isDeleting === item.id}
+                                        className="w-12 h-12 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all disabled:opacity-50"
+                                        title="Eliminar"
+                                    >
+                                        {isDeleting === item.id ? <Loader2 size={18} className="animate-spin"/> : <Trash size={18}/>}
+                                    </button>
+                                </div>
                             </div>
-                        </form>
+                        </PremiumCard>
+                    ))}
+                </div>
+            ) : (
+                <div className="bg-white border border-slate-100 rounded-[3.5rem] p-24 text-center space-y-8 flex flex-col items-center animate-in zoom-in-95 duration-700">
+                    <div className="w-24 h-24 bg-brand-50 rounded-[2.5rem] flex items-center justify-center text-brand-200">
+                        {activeTab === 'secuencias' ? <FolderHeart size={48}/> : <ClipboardCheck size={48}/>}
+                    </div>
+                    <div className="space-y-4">
+                        <h3 className="text-2xl font-black text-slate-900">Repositorio Vacío</h3>
+                        <p className="text-slate-500 font-medium max-w-sm mx-auto leading-relaxed">
+                            Las {activeTab === 'secuencias' ? 'secuencias' : 'evaluaciones'} que generes y guardes aparecerán aquí para que puedas reutilizarlas o asignarlas a tus clases.
+                        </p>
                     </div>
                 </div>
             )}
+
+            {/* Assignment Modal (Refactored to PremiumModal) */}
+            <PremiumModal 
+                isOpen={isAssignModalOpen} 
+                onClose={() => { setIsAssignModalOpen(false); setItemToAssign(null); }}
+                title="Desplegar Actividad"
+            >
+                <div className="space-y-8 py-4">
+                    <div className="p-6 bg-slate-900 rounded-3xl text-white relative overflow-hidden group">
+                        <div className="relative z-10">
+                            <span className="text-[9px] font-black text-brand-400 uppercase tracking-widest block mb-2">Item seleccionado:</span>
+                            <h4 className="text-xl font-black tracking-tight mb-1">{itemToAssign?.topic || 'Sin título'}</h4>
+                            <p className="text-white/40 text-xs font-bold uppercase tracking-widest">{itemToAssign?.subject}</p>
+                        </div>
+                        <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:opacity-20 transition-all">
+                            <Users size={80}/>
+                        </div>
+                    </div>
+
+                    <div className="space-y-6">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Aula de Destino</label>
+                            {classrooms.length === 0 ? (
+                                <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100 flex items-center gap-3 text-amber-700 text-sm font-bold">
+                                    <AlertCircle size={18}/> No hay aulas creadas aún.
+                                </div>
+                            ) : (
+                                <div className="relative">
+                                    <select
+                                        value={selectedClassroom}
+                                        onChange={(e) => setSelectedClassroom(e.target.value)}
+                                        className="w-full h-14 px-6 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-slate-800 outline-none appearance-none cursor-pointer focus:border-brand-500 transition-all"
+                                        required
+                                    >
+                                        <option value="">Elegir un aula...</option>
+                                        {classrooms.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                    </select>
+                                    <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-300">
+                                        <ChevronRight size={18} className="rotate-90"/>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Fecha de Entrega (Opcional)</label>
+                            <input
+                                type="datetime-local"
+                                value={dueDate}
+                                onChange={(e) => setDueDate(e.target.value)}
+                                className="w-full h-14 px-6 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-slate-800 outline-none focus:border-brand-500 transition-all"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="pt-4 flex flex-col gap-3">
+                        <PremiumButton 
+                            onClick={handleAssign}
+                            disabled={!selectedClassroom || isAssigning || classrooms.length === 0}
+                            loading={isAssigning}
+                            className="w-full !py-5 !rounded-3xl shadow-xl shadow-brand-500/20"
+                            icon={<Users size={20}/>}
+                        >
+                            Confirmar Asignación
+                        </PremiumButton>
+                        <button 
+                            onClick={() => { setIsAssignModalOpen(false); setItemToAssign(null); }}
+                            className="text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-slate-600 transition-colors py-2"
+                        >
+                            Cancelar Operación
+                        </button>
+                    </div>
+                </div>
+            </PremiumModal>
         </div>
     );
 };

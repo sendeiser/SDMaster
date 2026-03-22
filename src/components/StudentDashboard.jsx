@@ -1,7 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { Users, LogIn, ChevronRight, CheckCircle2, Circle, Clock, Loader2, BookOpen, ClipboardCheck } from 'lucide-react';
+import { 
+    Users, LogIn, ChevronRight, CheckCircle2, Circle, Clock, 
+    Loader2, BookOpen, ClipboardCheck, Layout, Calendar,
+    ExternalLink, AlertCircle, Sparkles, GraduationCap,
+    TrendingUp, Award, Play
+} from 'lucide-react';
 import AssignmentViewer from './AssignmentViewer';
+import { 
+    PremiumButton, PremiumCard, PremiumInput, 
+    PremiumToast, PremiumTabs 
+} from './shared/PremiumUI';
 
 const StudentDashboard = ({ session, profile }) => {
     const [joinCode, setJoinCode] = useState('');
@@ -11,6 +20,7 @@ const StudentDashboard = ({ session, profile }) => {
     const [activeClassroomId, setActiveClassroomId] = useState(null);
     const [selectedAssignment, setSelectedAssignment] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [notification, setNotification] = useState(null);
 
     useEffect(() => {
         if (session) {
@@ -26,10 +36,11 @@ const StudentDashboard = ({ session, profile }) => {
         }
     }, [activeClassroomId]);
 
+    const showNotif = (type, message, detail) => setNotification({ type, message, detail });
+
     const loadStudentData = async () => {
         setLoading(true);
         try {
-            // Get classrooms the student is enrolled in
             const { data, error } = await supabase
                 .from('classroom_students')
                 .select(`
@@ -54,6 +65,7 @@ const StudentDashboard = ({ session, profile }) => {
             }
         } catch (error) {
             console.error('Error loading classrooms:', error);
+            showNotif('error', 'Error de conexión', 'No pudimos cargar tus aulas.');
         } finally {
             setLoading(false);
         }
@@ -61,7 +73,6 @@ const StudentDashboard = ({ session, profile }) => {
 
     const loadAssignments = async (classroomId) => {
         try {
-            // Load assignments for this classroom
             const { data: assignmentsData, error: assignmentsError } = await supabase
                 .from('classroom_assignments')
                 .select('*')
@@ -70,16 +81,13 @@ const StudentDashboard = ({ session, profile }) => {
 
             if (assignmentsError) throw assignmentsError;
 
-            // Load student submissions for these assignments to check completion status
             const { data: submissionsData, error: submissionsError } = await supabase
                 .from('student_submissions')
                 .select('assignment_id, is_graded, final_score')
                 .eq('student_id', session.user.id)
-                .in('assignment_id', assignmentsData.map(a => a.id));
+                .in('assignment_id', assignmentsData.length > 0 ? assignmentsData.map(a => a.id) : ['dummy']);
 
-            if (submissionsError && submissionsError.code !== '22P02') { // Handle empty array case nicely
-                throw submissionsError;
-            }
+            if (submissionsError && submissionsError.code !== '22P02') throw submissionsError;
 
             const submissionsMap = (submissionsData || []).reduce((acc, sub) => {
                 acc[sub.assignment_id] = sub;
@@ -99,15 +107,14 @@ const StudentDashboard = ({ session, profile }) => {
     };
 
     const handleJoinClassroom = async (e) => {
-        e.preventDefault();
+        if (e) e.preventDefault();
         if (!joinCode.trim() || joinCode.length !== 6) {
-            alert("El código debe tener 6 caracteres.");
-            return; // Needs validation
+            showNotif('warning', 'Código Inválido', 'El código debe tener exactamente 6 caracteres.');
+            return;
         }
 
         setIsJoining(true);
         try {
-            // 1. Find the classroom by code
             const { data: classroomData, error: findError } = await supabase
                 .from('classrooms')
                 .select('id, name')
@@ -115,10 +122,9 @@ const StudentDashboard = ({ session, profile }) => {
                 .single();
 
             if (findError || !classroomData) {
-                throw new Error("Código de aula inválido o aula no encontrada.");
+                throw new Error("El código no corresponde a un aula activa.");
             }
 
-            // 2. Insert into classroom_students
             const { error: joinError } = await supabase
                 .from('classroom_students')
                 .insert({
@@ -127,19 +133,17 @@ const StudentDashboard = ({ session, profile }) => {
                 });
 
             if (joinError) {
-                if (joinError.code === '23505') { // Unique violation
-                    throw new Error("Ya estás inscrito en esta aula.");
-                }
+                if (joinError.code === '23505') throw new Error("Ya formas parte de esta aula.");
                 throw joinError;
             }
 
-            alert(`¡Te has unido a "${classroomData.name}" exitosamente!`);
+            showNotif('success', '¡Aula Unida!', `Te has unido a ${classroomData.name}.`);
             setJoinCode('');
-            await loadStudentData(); // Reload to show the new classroom
-            setActiveClassroomId(classroomData.id); // Switch to the new classroom
+            await loadStudentData();
+            setActiveClassroomId(classroomData.id);
 
         } catch (error) {
-            alert(error.message);
+            showNotif('error', 'Error al unirse', error.message);
         } finally {
             setIsJoining(false);
         }
@@ -147,8 +151,9 @@ const StudentDashboard = ({ session, profile }) => {
 
     if (loading) {
         return (
-            <div className="flex-grow flex items-center justify-center p-8 bg-slate-50">
-                <Loader2 size={40} className="animate-spin text-brand-500" />
+            <div className="flex flex-col items-center justify-center min-h-[400px] animate-pulse">
+                <div className="w-12 h-12 border-4 border-brand-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Cargando tu campus virtual...</p>
             </div>
         );
     }
@@ -160,172 +165,230 @@ const StudentDashboard = ({ session, profile }) => {
                 assignment={selectedAssignment} 
                 onBack={() => {
                     setSelectedAssignment(null);
-                    if (activeClassroomId) loadAssignments(activeClassroomId); // Reload to update status
+                    if (activeClassroomId) loadAssignments(activeClassroomId);
                 }} 
             />
         );
     }
 
+    const activeClassroom = classrooms.find(c => c.id === activeClassroomId);
+
     return (
-        <div className="flex-grow flex bg-slate-50 overflow-hidden h-full relative">
-            {/* Overlay móvil para sidebar */}
-            {activeClassroomId && (
-                <div className="lg:hidden absolute top-4 left-4 z-40">
-                    <button 
-                        onClick={() => setActiveClassroomId(null)}
-                        className="p-2 bg-white border border-slate-200 rounded-lg shadow-sm text-slate-600"
-                    >
-                        <Users size={20} />
-                    </button>
-                </div>
+        <div className="max-w-7xl mx-auto space-y-10 animate-fade-in pb-20">
+            {notification && (
+                <PremiumToast 
+                    type={notification.type} 
+                    message={notification.message} 
+                    detail={notification.detail} 
+                    onDismiss={() => setNotification(null)} 
+                />
             )}
 
-            {/* Sidebar de Aulas del Estudiante */}
-            <div className={`fixed inset-y-0 left-0 z-50 w-80 bg-white border-r border-slate-200 flex flex-col h-full transform transition-transform duration-300 lg:relative lg:translate-x-0 ${!activeClassroomId ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
-                <div className="p-6 border-b border-slate-100 flex-shrink-0">
-                    <h2 className="text-xl font-black text-slate-800 flex items-center gap-2 mb-6">
-                        <Users className="text-brand-500" />
-                        Mis Clases
-                    </h2>
+            {/* Header / Hero Section */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 bg-slate-900 p-10 rounded-[3rem] text-white overflow-hidden relative shadow-2xl">
+                <div className="relative z-10 space-y-2">
+                    <div className="flex items-center gap-2 mb-2">
+                        <div className="p-1.5 bg-brand-500/20 text-brand-400 rounded-lg backdrop-blur-md">
+                            <GraduationCap size={16} />
+                        </div>
+                        <span className="text-[10px] font-black text-white/50 uppercase tracking-[0.2em] leading-none">Portal del Estudiante</span>
+                    </div>
+                    <h1 className="text-4xl font-black tracking-tight">Hola, <span className="text-brand-400">{profile?.full_name?.split(' ')[0] || 'Estudiante'}</span> 👋</h1>
+                    <p className="text-white/60 font-medium max-w-xl">
+                        {activeClassroom 
+                            ? `Estás en el aula "${activeClassroom.name}". Tenés ${assignments.filter(a => !a.isCompleted).length} tareas pendientes.`
+                            : "Explora tus clases o únete a una nueva para comenzar a aprender."
+                        }
+                    </p>
+                </div>
 
-                    {/* Formulario para Unirse */}
-                    <form onSubmit={handleJoinClassroom} className="relative">
+                <div className="relative z-10 w-full md:w-auto">
+                    <div className="flex bg-white/5 backdrop-blur-xl border border-white/10 p-2 rounded-2xl">
                         <input
                             type="text"
-                            placeholder="Código de clase (6 letras)"
+                            placeholder="CÓDIGO DE AULA"
                             value={joinCode}
                             onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
                             maxLength={6}
-                            className="w-full pl-4 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all text-sm font-bold uppercase tracking-widest text-slate-700"
-                            required
+                            className="bg-transparent border-none outline-none text-white px-4 py-2 font-black text-sm uppercase tracking-widest placeholder:text-white/20 w-full md:w-40"
                         />
-                        <button
-                            type="submit"
-                            disabled={isJoining || joinCode.length < 6}
-                            className="absolute right-2 top-2 bottom-2 aspect-square flex items-center justify-center bg-brand-600 hover:bg-brand-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
-                            title="Unirse a la clase"
+                        <PremiumButton 
+                            onClick={handleJoinClassroom}
+                            loading={isJoining}
+                            className="!px-4 !py-2 !rounded-xl active:scale-95"
                         >
-                            {isJoining ? <Loader2 size={16} className="animate-spin" /> : <LogIn size={16} />}
-                        </button>
-                    </form>
+                            <LogIn size={18}/>
+                        </PremiumButton>
+                    </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
-                    {classrooms.length === 0 ? (
-                        <div className="text-center p-6 text-slate-400">
-                            <Users size={32} className="mx-auto mb-3 opacity-20" />
-                            <p className="text-sm font-medium">Aún no estás en ninguna clase.</p>
-                            <p className="text-xs mt-1">Pídele el código a tu profesor.</p>
-                        </div>
-                    ) : (
-                        classrooms.map(classroom => (
-                            <button
-                                key={classroom.id}
-                                onClick={() => setActiveClassroomId(classroom.id)}
-                                className={`w-full text-left p-4 rounded-2xl transition-all border ${
-                                    activeClassroomId === classroom.id 
-                                        ? 'bg-brand-50 border-brand-200 shadow-sm' 
-                                        : 'bg-white border-transparent hover:bg-slate-50 hover:border-slate-200'
-                                }`}
-                            >
-                                <h3 className={`font-black text-sm mb-1 ${activeClassroomId === classroom.id ? 'text-brand-700' : 'text-slate-700'}`}>
-                                    {classroom.name}
-                                </h3>
-                                <div className="text-xs font-medium text-slate-500 flex items-center gap-1.5">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
-                                    {classroom.teacherName}
-                                </div>
-                            </button>
-                        ))
-                    )}
+                {/* Background Decorations */}
+                <div className="absolute top-0 right-0 p-10 opacity-10 blur-xl">
+                    <Sparkles size={160} className="text-brand-400"/>
                 </div>
+                <div className="absolute -left-20 -bottom-20 w-80 h-80 bg-brand-600/10 rounded-full blur-[100px]"></div>
             </div>
 
-            {/* Panel Principal - Tareas del Aula Activa */}
-            <div className={`flex-1 overflow-y-auto bg-slate-50/50 p-4 md:p-8 custom-scrollbar ${!activeClassroomId ? 'hidden lg:block' : 'block'}`}>
-                <div className="max-w-4xl mx-auto">
-                    {activeClassroomId ? (
-                        <>
-                            <div className="mb-8">
-                                <h1 className="text-3xl font-black text-slate-900 tracking-tight">Trabajo de Clase</h1>
-                                <p className="text-slate-500 font-medium mt-2">Completa las actividades asignadas por el docente.</p>
+            {/* Main Content Layout */}
+            <div className="flex flex-col lg:flex-row gap-10">
+                
+                {/* Sidebar: Mis Aulas */}
+                <div className="w-full lg:w-80 shrink-0 space-y-6">
+                    <div className="flex items-center justify-between px-2">
+                        <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                            <Users size={14}/> Mis CLASES
+                        </h2>
+                    </div>
+
+                    <div className="space-y-3">
+                        {classrooms.length === 0 ? (
+                            <div className="p-8 text-center bg-white border border-slate-100 rounded-[2.5rem] border-dashed">
+                                <Users size={32} className="mx-auto text-slate-200 mb-3"/>
+                                <p className="text-xs font-bold text-slate-400 leading-relaxed uppercase tracking-widest">Aún no estás inscrito en ninguna aula.</p>
+                            </div>
+                        ) : (
+                            classrooms.map(classroom => (
+                                <button
+                                    key={classroom.id}
+                                    onClick={() => setActiveClassroomId(classroom.id)}
+                                    className={`w-full group relative flex flex-col items-start p-6 rounded-[2.2rem] transition-all duration-300 ${
+                                        activeClassroomId === classroom.id 
+                                        ? 'bg-white shadow-xl shadow-slate-200/50 border border-slate-100 -translate-y-1' 
+                                        : 'bg-transparent hover:bg-white hover:shadow-lg border border-transparent hover:border-slate-50'
+                                    }`}
+                                >
+                                    <div className={`w-10 h-10 rounded-2xl flex items-center justify-center mb-4 transition-all ${
+                                        activeClassroomId === classroom.id ? 'bg-brand-500 text-white shadow-lg shadow-brand-500/20' : 'bg-slate-100 text-slate-400'
+                                    }`}>
+                                        <BookOpen size={20}/>
+                                    </div>
+                                    <h3 className={`font-black text-sm tracking-tight mb-1 transition-colors ${
+                                        activeClassroomId === classroom.id ? 'text-slate-900' : 'text-slate-600'
+                                    }`}>
+                                        {classroom.name}
+                                    </h3>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                        <TrendingUp size={10} className="text-emerald-500"/> {classroom.teacherName}
+                                    </p>
+                                    
+                                    {activeClassroomId === classroom.id && (
+                                        <div className="absolute top-6 right-6 w-2 h-2 rounded-full bg-brand-500 animate-pulse"></div>
+                                    )}
+                                </button>
+                            ))
+                        )}
+                    </div>
+                </div>
+
+                {/* Content Area: Tareas */}
+                <div className="flex-1 min-w-0">
+                    {!activeClassroomId ? (
+                        <div className="bg-white border border-slate-100 rounded-[3.5rem] p-16 text-center space-y-6 flex flex-col items-center">
+                            <div className="w-24 h-24 bg-slate-50 rounded-[2.5rem] flex items-center justify-center text-slate-200">
+                                <Layout size={40}/>
+                            </div>
+                            <div className="space-y-2">
+                                <h3 className="text-2xl font-black text-slate-900">Seleccioná un aula</h3>
+                                <p className="text-slate-500 font-medium max-w-sm mx-auto">
+                                    Hacé clic en una de tus clases en la barra lateral para ver los trabajos asignados y tus calificaciones.
+                                </p>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
+                            <div className="flex items-center justify-between px-2">
+                                <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                    <ClipboardCheck size={14}/> TRABAJO DEL CURSO
+                                </h2>
+                                <div className="flex items-center gap-4 text-xs font-bold text-slate-500">
+                                    <div className="flex items-center gap-1.5">
+                                        <div className="w-2 h-2 rounded-full bg-emerald-500"></div> Completado
+                                    </div>
+                                    <div className="flex items-center gap-1.5">
+                                        <div className="w-2 h-2 rounded-full bg-slate-200"></div> Pendiente
+                                    </div>
+                                </div>
                             </div>
 
                             {assignments.length === 0 ? (
-                                <div className="bg-white border border-slate-200 border-dashed rounded-3xl p-12 text-center text-slate-400 flex flex-col items-center justify-center min-h-[400px]">
-                                    <ClipboardCheck size={48} className="mb-4 opacity-50" />
-                                    <h3 className="text-lg font-bold text-slate-600 mb-1">El aula está vacía</h3>
-                                    <p className="text-sm font-medium">El profesor aún no ha publicado tareas en esta clase.</p>
+                                <div className="bg-white border border-slate-100 rounded-[3.5rem] p-16 text-center space-y-6 flex flex-col items-center">
+                                    <div className="w-20 h-20 bg-brand-50 rounded-[2rem] flex items-center justify-center text-brand-300">
+                                        <Calendar size={32}/>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <h3 className="text-xl font-black text-slate-900">Todo al día</h3>
+                                        <p className="text-slate-500 font-medium">El profesor todavía no ha pulicado actividades en esta sección.</p>
+                                    </div>
                                 </div>
                             ) : (
-                                <div className="space-y-4">
+                                <div className="grid grid-cols-1 gap-4">
                                     {assignments.map(assignment => (
-                                        <div key={assignment.id} className="bg-white border border-slate-200 rounded-3xl p-6 hover:shadow-lg hover:border-brand-200 transition-all group flex items-start gap-4 cursor-pointer">
-                                            {/* Status Icon */}
-                                            <div className="flex-shrink-0 mt-1">
-                                                {assignment.isCompleted ? (
-                                                    <CheckCircle2 size={24} className="text-emerald-500" />
-                                                ) : (
-                                                    <Circle size={24} className="text-slate-300 group-hover:text-brand-400 transition-colors" />
-                                                )}
-                                            </div>
+                                        <PremiumCard 
+                                            key={assignment.id} 
+                                            noPadding 
+                                            className="group hover:-translate-y-1 transition-all duration-300 border-transparent hover:border-slate-100"
+                                        >
+                                            <div className="flex flex-col md:flex-row p-6 md:p-8 gap-6 md:items-center">
+                                                {/* Left Status */}
+                                                <div className={`w-14 h-14 shrink-0 rounded-2xl flex items-center justify-center transition-all ${
+                                                    assignment.isCompleted 
+                                                    ? 'bg-emerald-50 text-emerald-500 border border-emerald-100' 
+                                                    : 'bg-slate-50 text-slate-300 border border-slate-100'
+                                                }`}>
+                                                    {assignment.isCompleted ? <CheckCircle2 size={24}/> : <Circle size={24}/>}
+                                                </div>
 
-                                            {/* Info */}
-                                            <div className="flex-grow">
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <span className={`text-[10px] uppercase tracking-widest font-black px-2 py-0.5 rounded-md ${assignment.item_type === 'assessment' ? 'bg-purple-100 text-purple-700' : 'bg-brand-100 text-brand-700'}`}>
-                                                        {assignment.item_type === 'assessment' ? 'Evaluación' : 'Actividad'}
-                                                    </span>
-                                                    {assignment.due_date && (
-                                                        <span className="text-xs font-semibold text-rose-500 flex items-center gap-1 bg-rose-50 px-2 py-0.5 rounded-md">
-                                                            <Clock size={12} />
-                                                            Vence: {new Date(assignment.due_date).toLocaleDateString()}
+                                                {/* Core Info */}
+                                                <div className="flex-1 space-y-1">
+                                                    <div className="flex items-center gap-3 mb-2 flex-wrap">
+                                                        <span className={`text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg ${
+                                                            assignment.item_type === 'assessment' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
+                                                        }`}>
+                                                            {assignment.item_type === 'assessment' ? 'Evaluación' : 'Práctica'}
                                                         </span>
+                                                        {assignment.due_date && (
+                                                            <span className="text-[9px] font-black uppercase tracking-widest text-rose-500 flex items-center gap-1.5 bg-rose-50 px-2.5 py-1 rounded-lg">
+                                                                <Clock size={12}/> Vence el {new Date(assignment.due_date).toLocaleDateString()}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <h3 className="text-xl font-bold text-slate-900 group-hover:text-brand-600 transition-colors uppercase tracking-tight">
+                                                        {assignment.title}
+                                                    </h3>
+                                                    {assignment.description && (
+                                                        <p className="text-sm font-medium text-slate-400">
+                                                            {assignment.description}
+                                                        </p>
                                                     )}
                                                 </div>
-                                                <h3 className="text-lg font-black text-slate-800 leading-tight group-hover:text-brand-600 transition-colors">
-                                                    {assignment.title}
-                                                </h3>
-                                                {assignment.description && (
-                                                    <p className="text-sm font-medium text-slate-500 mt-1">
-                                                        {assignment.description}
-                                                    </p>
-                                                )}
 
-                                                {/* Retroalimentación pill si ya está calificado */}
+                                                {/* Feedback / Score */}
                                                 {assignment.isCompleted && assignment.submission?.is_graded && (
-                                                    <div className="mt-3 inline-flex items-center gap-2 bg-emerald-50 border border-emerald-100 px-3 py-1.5 rounded-lg text-sm font-bold text-emerald-700">
-                                                        <span>Calificación:</span>
-                                                        <span className="bg-emerald-200 px-2 py-0.5 rounded-md text-emerald-900">{assignment.submission.final_score}/10</span>
+                                                    <div className="flex items-center gap-4 bg-emerald-50 border border-emerald-100 p-4 rounded-3xl">
+                                                        <Award size={24} className="text-emerald-500"/>
+                                                        <div className="space-y-0.5">
+                                                            <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest leading-none">Calificación</p>
+                                                            <p className="text-2xl font-black text-emerald-900 leading-none">
+                                                                {assignment.submission.final_score}<span className="text-sm">/10</span>
+                                                            </p>
+                                                        </div>
                                                     </div>
                                                 )}
-                                            </div>
 
-                                            {/* Action Button */}
-                                            <div className="flex-shrink-0 self-center">
-                                                <button 
+                                                {/* Action */}
+                                                <PremiumButton 
                                                     onClick={() => setSelectedAssignment(assignment)}
-                                                    className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all ${
-                                                    assignment.isCompleted 
-                                                        ? 'bg-slate-100 text-slate-600 hover:bg-slate-200' 
-                                                        : 'bg-brand-50 text-brand-600 hover:bg-brand-600 hover:text-white group-hover:shadow-md'
-                                                }`}>
-                                                    {assignment.isCompleted ? 'Ver Entrega' : 'Iniciar'}
-                                                    <ChevronRight size={16} />
-                                                </button>
+                                                    variant={assignment.isCompleted ? 'secondary' : 'primary'}
+                                                    className={`!rounded-2xl !py-4 !px-8 shadow-xl ${assignment.isCompleted ? '' : 'shadow-brand-500/20'}`}
+                                                    icon={<Play size={18} fill="currentColor"/>}
+                                                >
+                                                    {assignment.isCompleted ? 'Ver Entrega' : 'Comenzar'}
+                                                </PremiumButton>
                                             </div>
-                                        </div>
+                                        </PremiumCard>
                                     ))}
                                 </div>
                             )}
-                        </>
-                    ) : (
-                        <div className="flex flex-col items-center justify-center h-full text-center p-12 opacity-50 space-y-4 min-h-[60vh]">
-                            <BookOpen size={64} className="text-brand-300" />
-                            <h2 className="text-2xl font-black text-slate-800 tracking-tight">Estás en la vista de Estudiante</h2>
-                            <p className="text-slate-500 font-medium max-w-md">
-                                Únete a una clase escribiendo el código que te dio tu profesor en la barra lateral, o selecciona una clase existente para ver tus tareas.
-                            </p>
                         </div>
                     )}
                 </div>

@@ -1,6 +1,11 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { X, Mail, Lock, Loader2, ArrowRight, UserPlus, LogIn, GraduationCap, BookOpen } from 'lucide-react';
+import { 
+    X, Mail, Lock as LockIcon, Loader2, ArrowRight, UserPlus, 
+    LogIn, GraduationCap, BookOpen, Sparkles, 
+    ChevronRight, ShieldCheck, MailCheck
+} from 'lucide-react';
+import { PremiumButton } from './shared/PremiumUI';
 
 const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
     const [isLogin, setIsLogin] = useState(true);
@@ -10,11 +15,12 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
     const [role, setRole] = useState('teacher'); // 'teacher' | 'student'
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [isSuccess, setIsSuccess] = useState(false);
 
     if (!isOpen) return null;
 
     const handleSubmit = async (e) => {
-        e.preventDefault();
+        if (e) e.preventDefault();
         setError(null);
         setLoading(true);
 
@@ -30,7 +36,7 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
                     options: {
                         data: {
                             full_name: fullName,
-                            role: role,  // 'teacher' or 'student'
+                            role: role,
                         }
                     }
                 });
@@ -38,7 +44,7 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
                 if (data.user && data.session) {
                     if (onAuthSuccess) onAuthSuccess(data.user);
                 } else {
-                    setError('Por favor revisa tu correo para confirmar tu cuenta.');
+                    setIsSuccess(true);
                 }
             }
         } catch (error) {
@@ -48,88 +54,130 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
         }
     };
 
-    return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 overflow-y-auto">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden relative my-auto">
-                {/* Header */}
-                <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                    <div className="flex items-center space-x-2">
-                        <div className="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-brand-500/20">
-                            {isLogin ? <LogIn size={16} /> : <UserPlus size={16} />}
-                        </div>
-                        <h2 className="text-xl font-bold text-slate-800">
-                            {isLogin ? 'Iniciar Sesión' : 'Crear Cuenta'}
-                        </h2>
+    if (isSuccess) {
+        return (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-xl p-4">
+                <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-md p-12 text-center space-y-8 animate-in zoom-in-95 duration-500">
+                    <div className="w-24 h-24 bg-emerald-50 text-emerald-500 rounded-[2.5rem] flex items-center justify-center mx-auto shadow-xl shadow-emerald-500/10">
+                        <MailCheck size={48} />
                     </div>
-                    {onClose && (
-                        <button
-                            onClick={onClose}
-                            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
-                        >
-                            <X size={20} />
-                        </button>
-                    )}
+                    <div className="space-y-4">
+                        <h2 className="text-3xl font-black text-slate-900 tracking-tight">¡Casi listo!</h2>
+                        <p className="text-slate-500 font-medium leading-relaxed">
+                            Enviamos un enlace de confirmación a <span className="text-slate-900 font-bold">{email}</span>. 
+                            Verificá tu casilla para activar tu cuenta de SD Master.
+                        </p>
+                    </div>
+                    <PremiumButton onClick={onClose} className="w-full !py-5 !rounded-3xl">
+                        Entendido
+                    </PremiumButton>
                 </div>
+            </div>
+        );
+    }
 
-                {/* Body */}
-                <div className="p-6">
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-md p-4 overflow-y-auto custom-scrollbar">
+            <div className="bg-white rounded-[3rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.2)] w-full max-w-[480px] overflow-hidden relative my-auto animate-in fade-in zoom-in-95 duration-300">
+                
+                {/* Decorative background for the modal header */}
+                <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-br from-brand-600/5 to-transparent pointer-events-none"></div>
+
+                {/* Close Button */}
+                {onClose && (
+                    <button
+                        onClick={onClose}
+                        className="absolute top-6 right-6 w-12 h-12 flex items-center justify-center text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-2xl transition-all z-20"
+                    >
+                        <X size={24} />
+                    </button>
+                )}
+
+                {/* Body Content */}
+                <div className="p-10 sm:p-14 relative z-10">
+                    
+                    {/* Brand/Logo */}
+                    <div className="flex items-center gap-3 mb-10">
+                        <div className="w-10 h-10 bg-brand-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-brand-500/30">
+                            <Sparkles size={20} />
+                        </div>
+                        <span className="text-lg font-black text-slate-900 tracking-tighter uppercase">SD Master</span>
+                    </div>
+
+                    <div className="space-y-2 mb-10">
+                        <h2 className="text-4xl font-black text-slate-900 tracking-tight leading-none">
+                            {isLogin ? 'Bienvenido' : 'Crear Cuenta'}
+                        </h2>
+                        <p className="text-slate-400 font-medium text-lg leading-relaxed">
+                            {isLogin 
+                                ? 'Ingresá tus credenciales para continuar.' 
+                                : 'Unite a la comunidad de docentes innovadores.'}
+                        </p>
+                    </div>
+
                     {error && (
-                        <div className="mb-5 bg-red-50 text-red-600 p-4 rounded-xl text-sm font-medium border border-red-100 flex items-start space-x-3">
-                            <span className="shrink-0 mt-0.5">⚠️</span>
+                        <div className="mb-8 p-6 bg-rose-50 border-2 border-rose-100 rounded-3xl text-rose-700 text-sm font-bold flex items-start gap-4 animate-in shake duration-500">
+                            <AlertCircle size={20} className="shrink-0 mt-0.5" />
                             <span>{error}</span>
                         </div>
                     )}
 
-                    <form onSubmit={handleSubmit} className="space-y-4">
-
-                        {/* Role selector — solo en registro */}
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        
                         {!isLogin && (
-                            <div className="space-y-2">
-                                <label className="text-sm font-semibold text-slate-700">Soy...</label>
-                                <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-4">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">¿Quién sos?</label>
+                                <div className="grid grid-cols-2 gap-4">
                                     <button
                                         type="button"
                                         onClick={() => setRole('teacher')}
-                                        className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                                        className={`flex flex-col items-center gap-3 p-6 rounded-[2rem] border-2 transition-all duration-300 ${
                                             role === 'teacher'
-                                                ? 'border-brand-500 bg-brand-50 text-brand-700'
-                                                : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-slate-50'
+                                                ? 'border-brand-500 bg-brand-50 text-brand-700 shadow-xl shadow-brand-500/5'
+                                                : 'border-slate-50 bg-slate-50/50 text-slate-400 hover:border-slate-100 hover:bg-slate-50'
                                         }`}
                                     >
-                                        <BookOpen size={24} className={role === 'teacher' ? 'text-brand-600' : 'text-slate-400'} />
-                                        <span className="font-bold text-sm">Docente</span>
-                                        <span className="text-[10px] text-center leading-tight opacity-70">Creo y asigno actividades</span>
+                                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${role === 'teacher' ? 'bg-brand-600 text-white' : 'bg-white text-slate-300'}`}>
+                                            <BookOpen size={24} />
+                                        </div>
+                                        <div className="text-center">
+                                            <span className="font-black text-sm block">Docente</span>
+                                            <span className="text-[9px] font-bold uppercase tracking-widest opacity-60">Crear</span>
+                                        </div>
                                     </button>
                                     <button
                                         type="button"
                                         onClick={() => setRole('student')}
-                                        className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                                        className={`flex flex-col items-center gap-3 p-6 rounded-[2rem] border-2 transition-all duration-300 ${
                                             role === 'student'
-                                                ? 'border-brand-500 bg-brand-50 text-brand-700'
-                                                : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-slate-50'
+                                                ? 'border-brand-500 bg-brand-50 text-brand-700 shadow-xl shadow-brand-500/5'
+                                                : 'border-slate-50 bg-slate-50/50 text-slate-400 hover:border-slate-100 hover:bg-slate-50'
                                         }`}
                                     >
-                                        <GraduationCap size={24} className={role === 'student' ? 'text-brand-600' : 'text-slate-400'} />
-                                        <span className="font-bold text-sm">Alumno</span>
-                                        <span className="text-[10px] text-center leading-tight opacity-70">Me uno a clases y entrego trabajos</span>
+                                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${role === 'student' ? 'bg-brand-600 text-white' : 'bg-white text-slate-300'}`}>
+                                            <GraduationCap size={24} />
+                                        </div>
+                                        <div className="text-center">
+                                            <span className="font-black text-sm block">Alumno</span>
+                                            <span className="text-[9px] font-bold uppercase tracking-widest opacity-60">Aprender</span>
+                                        </div>
                                     </button>
                                 </div>
                             </div>
                         )}
 
-                        {/* Nombre — solo en registro */}
                         {!isLogin && (
-                            <div className="space-y-1.5">
-                                <label className="text-sm font-semibold text-slate-700">Nombre Completo</label>
-                                <div className="relative">
-                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                                        <ArrowRight size={16} />
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Nombre Completo</label>
+                                <div className="relative group">
+                                    <div className="absolute inset-y-0 left-6 flex items-center pointer-events-none text-slate-300 group-focus-within:text-brand-500 transition-colors">
+                                        <ArrowRight size={20} />
                                     </div>
                                     <input
                                         type="text"
                                         required
-                                        className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all font-medium text-slate-700"
-                                        placeholder={role === 'teacher' ? 'Prof. Juan Pérez' : 'María García'}
+                                        className="w-full pl-16 pr-6 h-14 bg-slate-50 border-2 border-transparent rounded-2xl text-slate-800 font-bold focus:bg-white focus:border-brand-500 focus:outline-none transition-all"
+                                        placeholder={role === 'teacher' ? 'Prof. Juan Pérez' : 'Martín García'}
                                         value={fullName}
                                         onChange={(e) => setFullName(e.target.value)}
                                     />
@@ -137,17 +185,16 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
                             </div>
                         )}
 
-                        {/* Email */}
-                        <div className="space-y-1.5">
-                            <label className="text-sm font-semibold text-slate-700">Email</label>
-                            <div className="relative">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                                    <Mail size={16} />
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Correo Electrónico</label>
+                            <div className="relative group">
+                                <div className="absolute inset-y-0 left-6 flex items-center pointer-events-none text-slate-300 group-focus-within:text-brand-500 transition-colors">
+                                    <Mail size={20} />
                                 </div>
                                 <input
                                     type="email"
                                     required
-                                    className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all font-medium text-slate-700"
+                                    className="w-full pl-16 pr-6 h-14 bg-slate-50 border-2 border-transparent rounded-2xl text-slate-800 font-bold focus:bg-white focus:border-brand-500 focus:outline-none transition-all"
                                     placeholder="tu@email.com"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
@@ -155,53 +202,58 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
                             </div>
                         </div>
 
-                        {/* Password */}
-                        <div className="space-y-1.5">
-                            <label className="text-sm font-semibold text-slate-700">Contraseña</label>
-                            <div className="relative">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                                    <Lock size={16} />
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Tu Contraseña</label>
+                            <div className="relative group">
+                                <div className="absolute inset-y-0 left-6 flex items-center pointer-events-none text-slate-300 group-focus-within:text-brand-500 transition-colors">
+                                    <LockIcon size={20} />
                                 </div>
                                 <input
                                     type="password"
                                     required
-                                    className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all font-medium text-slate-700"
+                                    className="w-full pl-16 pr-6 h-14 bg-slate-50 border-2 border-transparent rounded-2xl text-slate-800 font-bold focus:bg-white focus:border-brand-500 focus:outline-none transition-all"
                                     placeholder="••••••••"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     minLength={6}
                                 />
                             </div>
-                            {!isLogin && <p className="text-xs text-slate-400 px-1">Mínimo 6 caracteres</p>}
                         </div>
 
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="w-full mt-2 flex items-center justify-center space-x-2 bg-brand-600 hover:bg-brand-700 text-white py-2.5 px-4 rounded-xl text-sm font-bold transition-all shadow-lg shadow-brand-500/20 disabled:opacity-70 disabled:cursor-not-allowed"
-                        >
-                            {loading ? (
-                                <Loader2 size={18} className="animate-spin" />
-                            ) : (
-                                <>
-                                    <span>{isLogin ? 'Entrar a SD Master' : `Registrarme como ${role === 'teacher' ? 'Docente' : 'Alumno'}`}</span>
-                                    <ArrowRight size={16} />
-                                </>
-                            )}
-                        </button>
+                        <div className="pt-4">
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="w-full h-16 bg-slate-900 hover:bg-brand-600 text-white rounded-[2rem] font-black text-lg transition-all shadow-2xl shadow-slate-900/10 active:scale-[0.98] flex items-center justify-center gap-3 group disabled:opacity-50"
+                            >
+                                {loading ? (
+                                    <Loader2 size={24} className="animate-spin" />
+                                ) : (
+                                    <>
+                                        <span>{isLogin ? 'Ingresar ahora' : 'Crear mi cuenta'}</span>
+                                        <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                                    </>
+                                )}
+                            </button>
+                        </div>
                     </form>
 
-                    <div className="mt-6 pt-6 border-t border-slate-100 text-center">
-                        <p className="text-sm text-slate-500">
-                            {isLogin ? '¿No tienes cuenta? ' : '¿Ya tienes cuenta? '}
-                            <button
-                                type="button"
-                                onClick={() => { setIsLogin(!isLogin); setError(null); }}
-                                className="text-brand-600 font-bold hover:text-brand-700 hover:underline transition-all"
-                            >
-                                {isLogin ? 'Regístrate aquí' : 'Inicia Sesión'}
-                            </button>
+                    <div className="mt-12 text-center">
+                        <p className="text-slate-400 font-bold text-sm">
+                            {isLogin ? '¿Aún no tenés acceso?' : '¿Ya sos parte del equipo?'}
                         </p>
+                        <button
+                            type="button"
+                            onClick={() => { setIsLogin(!isLogin); setError(null); }}
+                            className="mt-2 text-brand-600 font-black text-lg hover:text-brand-700 hover:underline transition-all"
+                        >
+                            {isLogin ? 'Registrate gratis aquí' : 'Iniciá sesión ahora'}
+                        </button>
+                    </div>
+
+                    <div className="mt-12 flex items-center justify-center gap-3 text-[9px] font-black text-slate-300 uppercase tracking-[0.2em]">
+                        <ShieldCheck size={14}/>
+                        <span>Servidor Seguro SSL</span>
                     </div>
                 </div>
             </div>

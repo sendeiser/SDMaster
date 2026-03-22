@@ -10,51 +10,58 @@ import ClassroomsTeacher from './components/ClassroomsTeacher';
 import StudentDashboard from './components/StudentDashboard';
 import CreditsBadge from './components/CreditsBadge';
 import PlansPage from './components/PlansPage';
+import { PremiumButton, PremiumCard, PremiumToast } from './components/shared/PremiumUI';
 import { supabase } from './lib/supabaseClient';
-import { Sparkles, Layout, Database, Settings as SettingsIcon, PanelLeftOpen, PanelLeftClose, LogOut, LogIn, Globe, FolderHeart, ClipboardCheck, Users, GraduationCap, Zap, BookOpen, ArrowRight } from 'lucide-react';
+import { 
+    Sparkles, Layout, Database, Settings as SettingsIcon, PanelLeftOpen, 
+    PanelLeftClose, LogOut, LogIn, Globe, FolderHeart, ClipboardCheck, 
+    Users, GraduationCap, Zap, BookOpen, ArrowRight, Menu, X,
+    ChevronRight, Bell, Search, User, Award, Play
+} from 'lucide-react';
 
 function App() {
-  const [activeTab, setActiveTab] = useState('generator');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [session, setSession] = useState(null);
-  const [isAuthLoading, setIsAuthLoading] = useState(true); // true while resolving session
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [loadedSequence, setLoadedSequence] = useState(null);
-  const [loadedAssessment, setLoadedAssessment] = useState(null);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [profile, setProfile] = useState(null);
+    const [activeTab, setActiveTab] = useState('generator');
+    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+    const [session, setSession] = useState(null);
+    const [isAuthLoading, setIsAuthLoading] = useState(true);
+    const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+    const [loadedSequence, setLoadedSequence] = useState(null);
+    const [loadedAssessment, setLoadedAssessment] = useState(null);
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [profile, setProfile] = useState(null);
+    const [notification, setNotification] = useState(null);
 
-  const handleLoadSequence = (seq) => {
-    setLoadedSequence(seq);
-    setActiveTab('generator');
-  };
+    const handleLoadSequence = (seq) => {
+        setLoadedSequence(seq);
+        setActiveTab('generator');
+        if (window.innerWidth < 1024) setIsMenuOpen(false);
+    };
 
-  const handleLoadAssessment = (assessment) => {
-    setLoadedAssessment(assessment);
-    setActiveTab('assessments');
-  };
+    const handleLoadAssessment = (assessment) => {
+        setLoadedAssessment(assessment);
+        setActiveTab('assessments');
+        if (window.innerWidth < 1024) setIsMenuOpen(false);
+    };
 
     const loadUserProfile = async (user) => {
-        if (user) {
+        if (!user) { setProfile(null); return null; }
+        try {
             const { data, error } = await supabase
                 .from('profiles')
-                .select('role, plan, credits_remaining')
+                .select('role, plan, credits_remaining, full_name, avatar_url')
                 .eq('id', user.id)
                 .single();
-            if (error) {
-                console.error('Error fetching profile:', error);
-                return null;
-            } else {
-                setProfile(data);
-                return data;
-            }
-        } else {
-            setProfile(null);
+            if (error) throw error;
+            setProfile(data);
+            return data;
+        } catch (error) {
+            console.error('Error fetching profile:', error);
             return null;
         }
     };
 
     useEffect(() => {
+        // Force Light Mode for consistent premium feel
         document.documentElement.classList.remove('dark');
         localStorage.removeItem('sd_dark_mode');
 
@@ -88,290 +95,387 @@ function App() {
         return () => subscription.unsubscribe();
     }, []);
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-  };
+    const handleLogout = async () => {
+        await supabase.auth.signOut();
+        setNotification({ type: 'info', message: 'Sesión Cerrada', detail: 'Has salido del sistema de forma segura.' });
+    };
 
     const navItems = [
-        { id: 'generator', label: 'Generador', icon: Layout, requireRole: 'teacher' },
-        { id: 'kb', label: 'Base de Conocimiento', icon: Database, requireRole: 'teacher' },
-        { id: 'my_sequences', label: 'Mis Secuencias', icon: FolderHeart, requireRole: 'teacher' },
-        { id: 'assessments', label: 'Evaluaciones', icon: ClipboardCheck, requireRole: 'teacher' },
-        { id: 'classrooms', label: 'Mis Aulas', icon: Users, requireRole: 'teacher' },
-        { id: 'student_classes', label: 'Mis Clases', icon: GraduationCap, requireRole: 'student' },
-        { id: 'community', label: 'Comunidad', icon: Globe, requireRole: 'teacher' },
-        { id: 'plans', label: 'Planes', icon: Zap, requireRole: 'teacher' },
-        { id: 'config', label: 'Configuración', icon: SettingsIcon },
+        { id: 'generator', label: 'Generador Pro', icon: Sparkles, requireRole: 'teacher', group: 'Creación' },
+        { id: 'assessments', label: 'Evaluaciones IA', icon: ClipboardCheck, requireRole: 'teacher', group: 'Creación' },
+        { id: 'kb', label: 'Base de Saber', icon: Database, requireRole: 'teacher', group: 'Creación' },
+        { id: 'my_sequences', label: 'Mis Recursos', icon: FolderHeart, requireRole: 'teacher', group: 'Gestión' },
+        { id: 'classrooms', label: 'Aulas Virtuales', icon: Users, requireRole: 'teacher', group: 'Gestión' },
+        { id: 'student_classes', label: 'Mi Tablero', icon: GraduationCap, requireRole: 'student', group: 'Alumno' },
+        { id: 'community', label: 'Comunidad', icon: Globe, requireRole: 'teacher', group: 'Explora' },
+        { id: 'plans', label: 'Suscripciones', icon: Zap, requireRole: 'teacher', group: 'Explora' },
+        { id: 'config', label: 'Mi Perfil', icon: SettingsIcon, group: 'Sistema' },
     ];
 
-    // ── AUTH GATE ──────────────────────────────────────────────────
-    // Mientras resuelve la sesión, muestra pantalla en blanco
     if (isAuthLoading) {
         return (
-            <div className="fixed inset-0 bg-slate-50 flex items-center justify-center">
-                <div className="w-10 h-10 bg-brand-600 rounded-2xl flex items-center justify-center animate-pulse">
-                    <Sparkles size={20} className="text-white" />
+            <div className="fixed inset-0 bg-[#F8FAFC] flex items-center justify-center">
+                <div className="flex flex-col items-center gap-6">
+                    <div className="w-16 h-16 bg-brand-600 rounded-[2rem] flex items-center justify-center animate-bounce shadow-2xl shadow-brand-500/40">
+                        <Sparkles size={32} className="text-white" />
+                    </div>
                 </div>
             </div>
         );
     }
 
-    // Sin sesión: mostrar landing page en lugar del dashboard
+    // ── Pre-Login Landing Page ──────────────────────────────────────────────────
     if (!session) {
         return (
-            <>
-                <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-brand-950 flex flex-col items-center justify-center p-6 text-center">
-                    {/* Logo */}
-                    <div className="w-20 h-20 bg-brand-600 rounded-3xl flex items-center justify-center text-white shadow-2xl shadow-brand-500/30 mb-8">
-                        <Sparkles size={36} />
+            <div className="fixed inset-0 bg-slate-900 flex flex-col font-inter overflow-hidden">
+                {notification && <PremiumToast {...notification} onDismiss={() => setNotification(null)} />}
+                
+                {/* Header for Landing */}
+                <div className="relative z-50 h-24 flex items-center justify-between px-10">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-brand-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-brand-500/20">
+                            <Sparkles size={22} />
+                        </div>
+                        <span className="text-xl font-black text-white tracking-tighter uppercase">SD Master</span>
                     </div>
-                    <h1 className="text-5xl font-black text-white tracking-tight mb-3">
-                        SD <span className="text-brand-400">Master</span>
-                    </h1>
-                    <p className="text-slate-400 text-lg max-w-md mb-10 font-medium">
-                        La plataforma de docentes que crean, asignan y corrigen con Inteligencia Artificial.
-                    </p>
-
-                    {/* Feature pills */}
-                    <div className="flex flex-wrap justify-center gap-3 mb-12">
-                        {['Secuencias Didácticas con IA', 'Evaluaciones Automáticas', 'Corrección por IA', 'Aulas Virtuales'].map(f => (
-                            <span key={f} className="bg-white/10 backdrop-blur-sm text-white/80 text-xs font-bold px-4 py-2 rounded-full border border-white/10">
-                                {f}
-                            </span>
-                        ))}
+                    <div className="flex items-center gap-6">
+                        <button onClick={() => setIsAuthModalOpen(true)} className="text-sm font-black text-white/60 hover:text-white transition-colors uppercase tracking-[0.2em]">Acceder</button>
+                        <PremiumButton onClick={() => setIsAuthModalOpen(true)} className="!rounded-2xl !py-3 !px-8 shadow-2xl shadow-brand-500/20">Empezar Gratis</PremiumButton>
                     </div>
-
-                    {/* CTA Buttons */}
-                    <div className="flex flex-col sm:flex-row gap-4">
-                        <button
-                            onClick={() => { setIsAuthModalOpen(true); }}
-                            className="flex items-center justify-center gap-2 px-8 py-4 bg-brand-600 hover:bg-brand-500 text-white font-black text-lg rounded-2xl transition-all shadow-2xl shadow-brand-500/30 hover:shadow-brand-500/50 hover:-translate-y-0.5"
-                        >
-                            <LogIn size={22} />
-                            Iniciar Sesión
-                        </button>
-                        <button
-                            onClick={() => { setIsAuthModalOpen(true); }}
-                            className="flex items-center justify-center gap-2 px-8 py-4 bg-white/10 hover:bg-white/20 text-white font-black text-lg rounded-2xl border border-white/20 transition-all hover:-translate-y-0.5 backdrop-blur-sm"
-                        >
-                            <ArrowRight size={22} />
-                            Crear Cuenta Gratis
-                        </button>
-                    </div>
-
-                    <p className="mt-8 text-slate-500 text-sm font-medium">
-                        Registrarse como Alumno también es <strong className="text-slate-400">gratuito</strong>
-                    </p>
                 </div>
 
-                {/* Auth modal — no close button (auth gate) */}
-                <AuthModal
-                    isOpen={isAuthModalOpen}
-                    onClose={null}
-                    onAuthSuccess={() => setIsAuthModalOpen(false)}
-                />
-            </>
+                {/* Main Landing Body */}
+                <div className="relative flex-grow flex flex-col items-center justify-center px-10">
+                    {/* Background Dynamic Shapes */}
+                    <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80vw] h-[80vw] bg-brand-600/5 blur-[160px] rounded-full" />
+                        <div className="absolute top-[-20%] right-[-10%] w-[50vw] h-[50vw] bg-indigo-600/10 blur-[140px] rounded-full animate-pulse" />
+                        <div className="absolute bottom-[-10%] left-[-10%] w-[40vw] h-[40vw] bg-brand-500/10 blur-[120px] rounded-full" />
+                    </div>
+
+                    <div className="relative z-10 w-full max-w-6xl flex flex-col items-center text-center animate-fade-in">
+                        <div className="inline-flex items-center gap-3 px-5 py-2.5 bg-white/5 border border-white/10 rounded-full text-brand-400 text-xs font-black uppercase tracking-[0.3em] mb-10 backdrop-blur-md">
+                            <Zap size={14} className="animate-pulse" /> Evolución Tecnológica para Docentes
+                        </div>
+
+                        <h1 className="text-5xl md:text-8xl font-black text-white tracking-tighter mb-8 leading-[1]">
+                            Enseñá mejor, <br/> trabajá <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-indigo-400">más inteligente</span>.
+                        </h1>
+
+                        <p className="text-slate-400 text-xl md:text-2xl max-w-3xl mb-14 font-medium leading-relaxed">
+                            La primera suite pedagógica con <span className="text-white font-black underline decoration-brand-500 decoration-4">IA Generativa</span> diseñada para transformar la corrección y planificación docente.
+                        </p>
+
+                        <div className="flex flex-col sm:flex-row gap-6">
+                            <PremiumButton 
+                                onClick={() => setIsAuthModalOpen(true)} 
+                                className="!px-12 !py-6 !text-xl !rounded-[2.5rem] shadow-2xl shadow-brand-500/30 active:scale-95 transition-all"
+                                icon={<ArrowRight size={24} />}
+                                iconPosition="right"
+                            >
+                                Registrarme Ahora
+                            </PremiumButton>
+                            <button 
+                                onClick={() => setIsAuthModalOpen(true)} 
+                                className="px-12 py-6 text-white font-black text-xl hover:bg-white/5 rounded-[2.5rem] border-2 border-white/10 transition-all flex items-center justify-center gap-4 group"
+                            >
+                                <Play size={24} className="fill-white group-hover:scale-110 transition-transform"/> Ver Demo
+                            </button>
+                        </div>
+
+                        <div className="mt-20 grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-20 text-center">
+                            {[
+                                { val: '+15k', lab: 'Secuencias' },
+                                { val: '98%', lab: 'Precisión IA' },
+                                { val: '+500', lab: 'Colegios' },
+                                { val: '24/7', lab: 'Soporte' }
+                            ].map(s => (
+                                <div key={s.lab}>
+                                    <div className="text-3xl font-black text-white mb-1">{s.val}</div>
+                                    <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{s.lab}</div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} onAuthSuccess={() => setIsAuthModalOpen(false)} />
+            </div>
         );
     }
 
-  return (
-    <div className="fixed inset-0 bg-slate-50 flex flex-col font-inter">
-      {/* Top Navigation Bar - Shared Premium Shell */}
-      <header className="h-16 bg-white/80 backdrop-blur-md border-b border-slate-200 flex items-center justify-between px-6 z-50">
-        <div className="flex items-center space-x-4">
-          <button
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="p-2 hover:bg-slate-100 rounded-xl text-slate-500 transition-colors"
-          >
-            {isSidebarOpen ? <PanelLeftClose size={20} /> : <PanelLeftOpen size={20} />}
-          </button>
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-brand-500/20 text-brand-50">
-              <Sparkles size={16} />
-            </div>
-            <span className="font-black text-slate-900 tracking-tight uppercase text-sm">SD Master <span className="text-brand-600">Pro</span></span>
-          </div>
-        </div>
-
-        {/* Dynamic Navigation - Desktop */}
-        <nav className="hidden lg:flex items-center bg-slate-100 rounded-2xl p-1 border border-slate-200">
-          {navItems.map((item) => {
-            // Unauthenticated view rules:
-            if (!session) {
-                if (item.requireRole) return null; // No tools for not logged in, only Community
-            } else {
-                // Logged in user: block items not matching role
-                if (item.requireRole && profile?.role !== item.requireRole) return null;
-            }
-
-            return (
-              <button
-                key={item.id}
-                onClick={() => setActiveTab(item.id)}
-                className={`flex items-center space-x-2 px-6 py-2 rounded-xl text-xs font-black transition-all ${activeTab === item.id ? 'bg-white text-brand-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
-              >
-                <item.icon size={14} />
-                <span>{item.label}</span>
-              </button>
-            );
-          })}
-        </nav>
-
-        <div className="flex items-center space-x-2 lg:space-x-4">
-          {/* Mobile Menu Toggle */}
-          <button
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="lg:hidden p-2 hover:bg-slate-100 rounded-xl text-slate-600 transition-colors"
-          >
-            {isMenuOpen ? <PanelLeftClose size={20} /> : <Layout size={20} />}
-          </button>
-
-          <div className="hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-100">
-            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-            <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">Sistema Activo</span>
-          </div>
-
-          <div className="h-6 w-px bg-slate-200 hidden md:block"></div>
-
-          {session ? (
-            <div className="flex items-center space-x-3">
-              <div className="flex flex-col items-end">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Cuenta PRO</span>
-                <span className="text-xs font-semibold text-slate-700 truncate max-w-[120px]">
-                  {session.user.email}
-                </span>
-              </div>
-              <button
-                onClick={handleLogout}
-                className="flex items-center gap-2 px-3 py-2 bg-slate-100/80 hover:bg-red-50 hover:text-red-600 text-slate-600 rounded-xl transition-all border border-transparent hover:border-red-100 group"
-                title="Cerrar sesión"
-              >
-                <LogOut size={16} className="group-hover:translate-x-0.5 transition-transform" />
-                <span className="text-xs font-bold">Cerrar Sesión</span>
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setIsAuthModalOpen(true)}
-              className="flex items-center space-x-2 bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-xl text-sm font-bold transition-colors shadow-lg shadow-slate-900/10"
-            >
-              <LogIn size={16} />
-              <span className="hidden sm:inline">Iniciar Sesión</span>
-            </button>
-          )}
-        </div>
-      </header>
-
-      {/* Mobile Navigation Drawer */}
-      <div
-        className={`lg:hidden fixed inset-0 z-[60] transition-all duration-300 ${isMenuOpen ? 'visible' : 'invisible'}`}
-      >
-        <div
-          className={`absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity duration-300 ${isMenuOpen ? 'opacity-100' : 'opacity-0'}`}
-          onClick={() => setIsMenuOpen(false)}
-        />
-        <div
-          className={`absolute top-16 left-0 right-0 bg-white border-b border-slate-200 p-4 transition-transform duration-300 transform ${isMenuOpen ? 'translate-y-0' : '-translate-y-full'}`}
-        >
-          <nav className="flex flex-col space-y-2">
-            {navItems.map((item) => {
-              if (!session) {
-                  if (item.requireRole) return null;
-              } else {
-                  if (item.requireRole && profile?.role !== item.requireRole) return null;
-              }
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => { setActiveTab(item.id); setIsMenuOpen(false); }}
-                  className={`flex items-center space-x-3 w-full px-4 py-3 rounded-xl text-sm font-bold transition-all ${activeTab === item.id ? 'bg-brand-50 text-brand-600' : 'text-slate-600 hover:bg-slate-50'}`}
-                >
-                  <item.icon size={18} />
-                  <span>{item.label}</span>
-                </button>
-              );
-            })}
+    // ── Authenticated Premium Shell ─────────────────────────────────────────────
+    return (
+        <div className="fixed inset-0 bg-[#F8FAFC] flex flex-col font-inter overflow-hidden">
+            {notification && <PremiumToast {...notification} onDismiss={() => setNotification(null)} />}
             
-            {session && (
-              <button
-                onClick={handleLogout}
-                className="flex items-center space-x-3 w-full px-4 py-4 rounded-xl text-sm font-black text-red-600 bg-red-50 hover:bg-red-100 transition-all mt-4 border border-red-100"
-              >
-                <LogOut size={18} />
-                <span>Cerrar Sesión</span>
-              </button>
-            )}
-          </nav>
-        </div>
-      </div>
+            {/* Main Premium Header */}
+            <header className="h-20 flex-shrink-0 bg-white/80 backdrop-blur-xl border-b border-slate-100 flex items-center justify-between px-6 sm:px-10 z-[60] shadow-sm">
+                <div className="flex items-center gap-6">
+                    <button
+                        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                        className="p-3 bg-slate-50 hover:bg-slate-100 rounded-2xl text-slate-500 transition-all active:scale-90 border border-slate-100"
+                    >
+                        {isSidebarOpen ? <PanelLeftClose size={22} fill="currentColor" className="opacity-10"/> : <PanelLeftOpen size={22} />}
+                    </button>
+                    
+                    <div className="flex items-center gap-3 group cursor-pointer" onClick={() => setActiveTab('generator')}>
+                        <div className="w-10 h-10 bg-brand-600 rounded-[1.25rem] flex items-center justify-center text-white shadow-xl shadow-brand-500/20 group-hover:rotate-12 transition-transform duration-500">
+                            <Sparkles size={20} />
+                        </div>
+                        <div className="hidden sm:block">
+                            <h2 className="font-black text-slate-900 tracking-tighter text-lg leading-none uppercase">SD Master</h2>
+                            <p className="text-[9px] font-black text-brand-600 tracking-[0.2em] uppercase mt-1">Workspace v2.0</p>
+                        </div>
+                    </div>
+                </div>
 
+                {/* Quick Actions Search (Placeholder decorative) */}
+                <div className="hidden xl:flex flex-1 max-w-md mx-10">
+                    <div className="relative w-full">
+                        <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none text-slate-300">
+                            <Search size={16} />
+                        </div>
+                        <input 
+                            type="text" 
+                            placeholder="Buscar en mi biblioteca..." 
+                            className="w-full pl-14 pr-6 h-12 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-bold text-slate-700 focus:bg-white focus:border-brand-500 focus:outline-none transition-all"
+                        />
+                        <div className="absolute inset-y-0 right-4 flex items-center gap-1.5 opacity-30">
+                            <span className="text-[10px] bg-slate-200 px-1.5 py-0.5 rounded">⌘</span>
+                            <span className="text-[10px] bg-slate-200 px-1.5 py-0.5 rounded">K</span>
+                        </div>
+                    </div>
+                </div>
 
-      <main className="flex-grow flex overflow-hidden">
-        {activeTab === 'generator' ? (
-          <SequenceGenerator
-            isSidebarOpen={isSidebarOpen}
-            setIsSidebarOpen={setIsSidebarOpen}
-            session={session}
-            profile={profile}
-            loadedSequence={loadedSequence}
-            clearLoadedSequence={() => setLoadedSequence(null)}
-          />
-        ) : activeTab === 'kb' ? (
-          <div className="flex-grow flex justify-center items-center bg-slate-200/50 p-8 overflow-y-auto custom-scrollbar">
-            <div className="w-full max-w-4xl">
-              <UploadModule />
+                {/* Top Right Profile & Info */}
+                <div className="flex items-center gap-4 sm:gap-8">
+                    <div className="hidden md:flex items-center gap-3">
+                        <div className="text-right">
+                           <div className="flex items-center justify-end gap-1.5 mb-1 text-emerald-500">
+                                <span className="text-[10px] font-black uppercase tracking-widest leading-none">Status: Pro</span>
+                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-lg shadow-emerald-400"></div>
+                           </div>
+                           <p className="text-xs font-black text-slate-900 leading-none">Patrimonio Seguro</p>
+                        </div>
+                    </div>
+
+                    <div className="h-10 w-[1px] bg-slate-100 hidden sm:block"></div>
+
+                    <div className="flex items-center gap-4">
+                        <PremiumButton 
+                            variant="secondary" 
+                            className="!p-0 !w-12 !h-12 !rounded-[1.25rem] !bg-slate-50 !border-slate-100"
+                            onClick={() => setActiveTab('config')}
+                        >
+                            <Bell size={20} className="text-slate-400"/>
+                        </PremiumButton>
+
+                        <button 
+                            onClick={() => setActiveTab('config')}
+                            className="flex items-center gap-3 p-1.5 pr-4 bg-slate-50 hover:bg-white border border-slate-100 hover:border-brand-500/20 rounded-2xl transition-all group"
+                        >
+                            <div className="w-9 h-9 bg-brand-600 rounded-xl overflow-hidden p-[1px] shadow-lg shadow-brand-500/10 group-hover:scale-110 transition-transform">
+                                <div className="w-full h-full rounded-[0.55rem] bg-white flex items-center justify-center text-slate-300 overflow-hidden">
+                                    {profile?.avatar_url ? (
+                                        <img src={profile.avatar_url} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <User size={18}/>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="hidden sm:block text-left">
+                                <p className="text-[11px] font-black text-slate-900 leading-none truncate max-w-[100px]">{profile?.full_name?.split(' ')[0] || 'Mi Perfil'}</p>
+                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Docente</p>
+                            </div>
+                            <ChevronRight size={14} className="text-slate-300 group-hover:translate-x-1 transition-transform"/>
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            {/* Mobile Navigation Drawer */}
+            <div className={`fixed inset-0 z-[100] transition-all duration-500 lg:hidden ${isMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" onClick={() => setIsMenuOpen(false)} />
+                <div className={`absolute top-0 bottom-0 left-0 w-[80%] max-w-sm bg-white shadow-2xl transition-transform duration-500 transform ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+                    {/* Reuse sidebar logic or similar */}
+                    <div className="p-8 h-full flex flex-col">
+                        {/* Mobile Header */}
+                        <div className="flex items-center justify-between mb-12">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-brand-600 rounded-2xl flex items-center justify-center text-white">
+                                    <Sparkles size={20} />
+                                </div>
+                                <h2 className="font-black text-slate-900 tracking-tighter uppercase">SD Master</h2>
+                            </div>
+                            <button onClick={() => setIsMenuOpen(false)} className="p-3 text-slate-400"><X size={24}/></button>
+                        </div>
+                        
+                        {/* Mobile Links */}
+                        <div className="flex-grow space-y-2 overflow-y-auto custom-scrollbar pr-2">
+                             {navItems.map((item) => {
+                                if (item.requireRole && profile?.role !== item.requireRole) return null;
+                                const isActive = activeTab === item.id;
+                                return (
+                                    <button
+                                        key={item.id}
+                                        onClick={() => { setActiveTab(item.id); setIsMenuOpen(false); }}
+                                        className={`flex items-center gap-4 w-full p-5 rounded-[1.5rem] font-black transition-all ${isActive ? 'bg-brand-600 text-white shadow-xl shadow-brand-500/20' : 'text-slate-500 hover:bg-slate-50'}`}
+                                    >
+                                        <item.icon size={20} />
+                                        <span className="text-sm">{item.label}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        <div className="pt-8 border-t border-slate-100">
+                             <button onClick={handleLogout} className="w-full flex items-center gap-4 p-5 rounded-[1.5rem] font-black text-rose-600 hover:bg-rose-50 transition-all">
+                                <LogOut size={20} />
+                                <span className="text-sm uppercase tracking-widest">Cerrar Sesión</span>
+                             </button>
+                        </div>
+                    </div>
+                </div>
             </div>
-          </div>
-        ) : activeTab === 'community' ? (
-          <ExploreSequences onLoadSequence={handleLoadSequence} onLoadAssessment={handleLoadAssessment} />
-        ) : activeTab === 'my_sequences' ? (
-          <MySequences session={session} onLoadSequence={handleLoadSequence} onLoadAssessment={handleLoadAssessment} />
-        ) : activeTab === 'assessments' ? (
-          <AssessmentGenerator
-            isSidebarOpen={isSidebarOpen}
-            setIsSidebarOpen={setIsSidebarOpen}
-            session={session}
-            profile={profile}
-            loadedAssessment={loadedAssessment}
-            clearLoadedAssessment={() => setLoadedAssessment(null)}
-          />
-        ) : activeTab === 'classrooms' ? (
-          <ClassroomsTeacher session={session} profile={profile} />
-        ) : activeTab === 'student_classes' ? (
-          <StudentDashboard session={session} profile={profile} />
-        ) : activeTab === 'plans' ? (
-          <div className="flex-grow overflow-y-auto custom-scrollbar">
-            <PlansPage currentPlan={profile?.plan || 'free'} onClose={() => setActiveTab(profile?.role === 'student' ? 'student_classes' : 'generator')} />
-          </div>
-        ) : (
-          <Settings session={session} onProfileUpdate={loadUserProfile} />
-        )}
-      </main>
 
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-        .font-inter { font-family: 'Inter', sans-serif; }
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
-        .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; }
-      `}</style>
+            <main className="flex-grow flex overflow-hidden">
+                {/* Desktop Premium Sidebar */}
+                <aside className={`
+                    hidden lg:flex flex-col flex-shrink-0 bg-white border-r border-slate-100 transition-all duration-700 ease-in-out relative z-40
+                    ${isSidebarOpen ? 'w-80' : 'w-24'}
+                `}>
+                    <div className="flex-grow flex flex-col p-6 space-y-12 overflow-y-auto custom-scrollbar overflow-x-hidden">
+                        
+                        {/* Grouped Navigation */}
+                        {['Creación', 'Gestión', 'Explora', 'Sistema'].map(group => {
+                            const items = navItems.filter(i => i.group === group);
+                            if (items.every(i => i.requireRole && profile?.role !== i.requireRole)) return null;
 
-      {/* Footer / Credits */}
-      <footer className="fixed bottom-4 left-6 z-[60] lg:left-auto lg:right-6 pointer-events-none">
-        <p className="text-[10px] font-black text-slate-400/50 uppercase tracking-[0.2em] transition-opacity hover:opacity-100">
-          Creado por <span className="text-brand-500/50">Martin G Gonzalez</span>
-        </p>
-      </footer>
+                            return (
+                                <div key={group} className="space-y-4">
+                                    <h4 className={`text-[10px] font-black uppercase tracking-[0.3em] text-slate-300 transition-opacity duration-500 ml-4 ${isSidebarOpen ? 'opacity-100' : 'opacity-0'}`}>
+                                        {group}
+                                    </h4>
+                                    <div className="space-y-2">
+                                        {items.map(item => {
+                                            if (item.requireRole && profile?.role !== item.requireRole) return null;
+                                            const isActive = activeTab === item.id;
+                                            return (
+                                                <button
+                                                    key={item.id}
+                                                    onClick={() => setActiveTab(item.id)}
+                                                    className={`
+                                                        w-full flex items-center gap-4 p-4 rounded-[1.5rem] transition-all duration-500 relative group
+                                                        ${isActive 
+                                                            ? 'bg-brand-600 text-white shadow-xl shadow-brand-500/20' 
+                                                            : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'}
+                                                    `}
+                                                    title={!isSidebarOpen ? item.label : ''}
+                                                >
+                                                    <div className={`transition-all duration-500 ${!isSidebarOpen && 'mx-auto'}`}>
+                                                        <item.icon size={22} strokeWidth={isActive ? 2.5 : 2} />
+                                                    </div>
+                                                    <span className={`text-sm font-black tracking-tight whitespace-nowrap transition-all duration-500 ${isSidebarOpen ? 'opacity-100' : 'opacity-0 w-0'}`}>
+                                                        {item.label}
+                                                    </span>
+                                                    {!isSidebarOpen && isActive && (
+                                                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-8 bg-brand-500 rounded-r-full"></div>
+                                                    )}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            );
+                        })}
 
-      <AuthModal
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-        onAuthSuccess={() => setIsAuthModalOpen(false)}
-      />
-    </div>
-  );
+                        {/* Credits Badge Integrated in Sidebar */}
+                        {isSidebarOpen && profile?.role === 'teacher' && (
+                            <div className="mt-auto px-2">
+                                <PremiumCard className="!p-6 !bg-slate-900 !rounded-[2.5rem] text-white space-y-4 relative overflow-hidden group">
+                                    <div className="relative z-10">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <div className="p-2 bg-brand-500 rounded-xl text-white">
+                                                <Zap size={16} fill="currentColor"/>
+                                            </div>
+                                            <span className="text-[10px] font-black text-brand-400 uppercase tracking-widest leading-none">Mi Plan: {profile.plan || 'Free'}</span>
+                                        </div>
+                                        <h5 className="text-2xl font-black tracking-tighter leading-none mb-1">{profile.credits_remaining || 0} <span className="text-white/40 text-[10px] tracking-widest font-bold">CR</span></h5>
+                                        <p className="text-white/40 text-[9px] font-black uppercase tracking-widest">Créditos IA Disponibles</p>
+                                    </div>
+                                    <button className="relative z-10 w-full py-3 bg-white/10 hover:bg-white/20 text-white font-black text-[10px] uppercase tracking-widest rounded-xl transition-all border border-white/10">
+                                        Cargar más
+                                    </button>
+                                    <div className="absolute -right-8 -bottom-8 opacity-5 text-white group-hover:scale-125 transition-transform duration-700">
+                                        <Award size={120} />
+                                    </div>
+                                </PremiumCard>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="p-8 border-t border-slate-100">
+                        <button 
+                            onClick={handleLogout}
+                            className={`flex items-center gap-4 w-full p-4 rounded-[1.5rem] font-black text-rose-500 hover:bg-rose-50 transition-all ${!isSidebarOpen && 'justify-center p-4'}`}
+                            title="Cerrar Sesión"
+                        >
+                            <LogOut size={22} />
+                            <span className={`text-sm uppercase tracking-widest transition-all ${isSidebarOpen ? 'opacity-100' : 'opacity-0 w-0'}`}>Salir</span>
+                        </button>
+                    </div>
+                </aside>
+
+                {/* Content Area */}
+                <div className="flex-1 flex flex-col h-full relative overflow-y-auto custom-scrollbar overflow-x-hidden bg-[#F8FAFC]">
+                    {/* Mobile Bottom Navigation (Floating) */}
+                    <div className="lg:hidden fixed bottom-10 left-1/2 -translate-x-1/2 z-[50] flex items-center bg-white/80 backdrop-blur-2xl px-6 py-4 rounded-[2.5rem] shadow-2xl border border-white/50 gap-10">
+                        <button onClick={() => setActiveTab('generator')} className={`p-2 transition-all ${activeTab === 'generator' ? 'text-brand-600 scale-125' : 'text-slate-400'}`}><Sparkles size={24}/></button>
+                        <button onClick={() => setActiveTab('classrooms')} className={`p-2 transition-all ${activeTab === 'classrooms' ? 'text-brand-600 scale-125' : 'text-slate-400'}`}><Users size={24}/></button>
+                        <button onClick={() => setIsMenuOpen(true)} className="p-4 bg-slate-900 rounded-3xl text-white shadow-xl shadow-slate-900/20 active:scale-90 transition-transform"><Menu size={24}/></button>
+                        <button onClick={() => setActiveTab('community')} className={`p-2 transition-all ${activeTab === 'community' ? 'text-brand-600 scale-125' : 'text-slate-400'}`}><Globe size={24}/></button>
+                        <button onClick={() => setActiveTab('config')} className={`p-2 transition-all ${activeTab === 'config' ? 'text-brand-600 scale-125' : 'text-slate-400'}`}><SettingsIcon size={24}/></button>
+                    </div>
+
+                    <div className="p-6 sm:p-10 animate-fade-in pb-32 lg:pb-10">
+                        {activeTab === 'generator' ? (
+                            <SequenceGenerator session={session} profile={profile} loadedSequence={loadedSequence} clearLoadedSequence={() => setLoadedSequence(null)} />
+                        ) : activeTab === 'kb' ? (
+                            <UploadModule />
+                        ) : activeTab === 'community' ? (
+                            <ExploreSequences onLoadSequence={handleLoadSequence} onLoadAssessment={handleLoadAssessment} />
+                        ) : activeTab === 'my_sequences' ? (
+                            <MySequences session={session} onLoadSequence={handleLoadSequence} onLoadAssessment={handleLoadAssessment} />
+                        ) : activeTab === 'assessments' ? (
+                            <AssessmentGenerator session={session} profile={profile} loadedAssessment={loadedAssessment} clearLoadedAssessment={() => setLoadedAssessment(null)} />
+                        ) : activeTab === 'classrooms' ? (
+                            <ClassroomsTeacher session={session} profile={profile} />
+                        ) : activeTab === 'student_classes' ? (
+                            <StudentDashboard session={session} profile={profile} />
+                        ) : activeTab === 'plans' ? (
+                            <PlansPage currentPlan={profile?.plan || 'free'} onClose={() => setActiveTab(profile?.role === 'student' ? 'student_classes' : 'generator')} />
+                        ) : (
+                            <Settings session={session} onProfileUpdate={loadUserProfile} />
+                        )}
+                    </div>
+                </div>
+            </main>
+
+            <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} onAuthSuccess={() => setIsAuthModalOpen(false)} />
+
+            <style>{`
+                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+                .font-inter { font-family: 'Inter', sans-serif; }
+                .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+                .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+                .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 20px; border: 2px solid transparent; background-clip: content-box; }
+                .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
+                .animate-fade-in { animation: fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1); }
+                @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+            `}</style>
+        </div>
+    );
 }
 
 export default App;
-

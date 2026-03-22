@@ -1,44 +1,39 @@
 import React from 'react';
-import { Zap, CheckCircle2, X, ArrowRight } from 'lucide-react';
+import { Zap, CheckCircle2, X, ArrowRight, Star, ShieldCheck, Mail } from 'lucide-react';
+import { PremiumButton, PremiumCard } from './shared/PremiumUI';
 
 const PLANS = [
     {
         id: 'free',
         name: 'Free',
-        price: '$0',
-        period: 'siempre gratis',
-        color: 'border-slate-200',
-        badge: 'bg-slate-100 text-slate-600',
-        btnClass: 'bg-slate-100 text-slate-700 hover:bg-slate-200',
-        btnLabel: 'Plan Actual',
-        disabled: true,
+        price: 'Gratis',
+        period: 'siempre',
+        badge: 'Básico',
+        description: 'Ideal para probar el poder de la IA en tus clases.',
         features: [
             '10 generaciones IA / mes',
-            '1 Aula de clase',
+            '1 Aula de clase activa',
             'Hasta 15 alumnos por aula',
-            'Corrección automática: ✓',
-            'Exportar CSV: ✓',
+            'Corrección automática estándar',
+            'Exportación de notas (CSV)',
         ],
-        missing: ['Generaciones ilimitadas', 'Aulas ilimitadas'],
+        missing: ['Generaciones ilimitadas', 'Aulas ilimitadas', 'Soporte prioritario'],
     },
     {
         id: 'pro',
         name: 'Pro Docente',
         price: '$9.99',
         period: '/ mes',
-        color: 'border-brand-400 shadow-xl shadow-brand-500/10',
-        badge: 'bg-brand-600 text-white',
-        btnClass: 'bg-brand-600 hover:bg-brand-700 text-white shadow-lg shadow-brand-500/25',
-        btnLabel: 'Suscribirme',
+        badge: 'Más Popular',
         popular: true,
-        disabled: false,
+        description: 'Todo lo que un docente necesita para potenciar su productividad.',
         features: [
             '100 generaciones IA / mes',
             'Aulas ilimitadas',
-            'Alumnos ilimitados por aula',
-            'Corrección automática: ✓',
-            'Exportar CSV: ✓',
-            'Soporte prioritario',
+            'Alumnos ilimitados',
+            'Corrección automática IA avanzada',
+            'Soporte prioritario 24/7',
+            'Exportación avanzada',
         ],
         missing: [],
     },
@@ -47,19 +42,15 @@ const PLANS = [
         name: 'Institución',
         price: '$29.99',
         period: '/ mes',
-        color: 'border-amber-300',
-        badge: 'bg-amber-500 text-white',
-        btnClass: 'bg-amber-500 hover:bg-amber-600 text-white',
-        btnLabel: 'Contactar',
-        disabled: false,
+        badge: 'Enterprise',
+        description: 'Para escuelas que buscan digitalizar su pedagogía.',
         features: [
             '500 generaciones IA / mes',
-            'Aulas ilimitadas',
-            'Múltiples docentes',
-            'Corrección automática: ✓',
-            'Exportar CSV: ✓',
-            'Panel administrativo',
-            'Soporte dedicado',
+            'Panel administrativo central',
+            'Múltiples cuentas docentes',
+            'Capacitación dedicada',
+            'API de integración propia',
+            'SLA de 99.9%',
         ],
         missing: [],
     },
@@ -67,99 +58,116 @@ const PLANS = [
 
 const PlansPage = ({ currentPlan = 'free', onClose }) => {
     return (
-        <div className="min-h-full bg-gradient-to-b from-slate-50 to-white py-12 px-4">
-            <div className="max-w-5xl mx-auto">
+        <div className="min-h-full bg-slate-50/30 py-12 px-4 animate-fade-in">
+            <div className="max-w-6xl mx-auto space-y-16">
 
                 {/* Header */}
-                <div className="text-center mb-12">
-                    <div className="inline-flex items-center gap-2 bg-brand-100 text-brand-700 font-bold text-xs uppercase tracking-widest px-4 py-2 rounded-full mb-4">
-                        <Zap size={13} className="fill-brand-600" /> Planes y Precios
+                <div className="text-center space-y-6">
+                    <div className="inline-flex items-center gap-2 bg-brand-50 text-brand-600 font-black text-[10px] uppercase tracking-[0.2em] px-5 py-2.5 rounded-full border border-brand-100 shadow-sm">
+                        <Zap size={14} className="fill-brand-600" /> Membresías
                     </div>
-                    <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-3">
-                        Elegí tu plan
+                    <h1 className="text-4xl md:text-6xl font-black text-slate-900 tracking-tight leading-[1.1]">
+                        Potenciá tu <span className="text-brand-600">Impacto Docente</span>
                     </h1>
-                    <p className="text-slate-500 text-lg max-w-xl mx-auto">
-                        Generá secuencias, evaluaciones y corregí trabajos con IA. Sin límites con los planes de pago.
+                    <p className="text-slate-500 text-lg md:text-xl font-medium max-w-2xl mx-auto leading-relaxed">
+                        Elegí la escala de tu transformación digital. Generá, evaluá y corregí con el poder de la IA más avanzada.
                     </p>
                 </div>
 
-                {/* Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+                {/* Cards Container */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch pb-10">
                     {PLANS.map(plan => (
-                        <div
+                        <PremiumCard
                             key={plan.id}
-                            className={`relative bg-white rounded-3xl border-2 p-8 flex flex-col ${plan.color} transition-all`}
+                            noPadding
+                            className={`flex flex-col relative group transition-all duration-500 hover:-translate-y-2 ${
+                                plan.popular ? 'border-brand-200 shadow-2xl shadow-brand-500/10' : 'border-slate-100'
+                            }`}
                         >
                             {plan.popular && (
-                                <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                                    <span className="bg-brand-600 text-white text-xs font-black px-4 py-1.5 rounded-full shadow-lg">
-                                        ⭐ Más Popular
+                                <div className="absolute -top-4 inset-x-0 flex justify-center z-10">
+                                    <span className="bg-brand-600 text-white text-[10px] font-black uppercase tracking-widest px-5 py-2 rounded-full shadow-xl">
+                                        ⭐ Recomendado
                                     </span>
                                 </div>
                             )}
 
-                            <div className={`self-start text-xs font-black uppercase tracking-widest px-3 py-1 rounded-full mb-4 ${plan.badge}`}>
-                                {plan.name}
-                            </div>
-
-                            <div className="mb-6">
-                                <span className="text-4xl font-black text-slate-900">{plan.price}</span>
-                                <span className="text-slate-400 font-medium ml-1">{plan.period}</span>
-                            </div>
-
-                            {/* Features */}
-                            <ul className="space-y-3 mb-8 flex-1">
-                                {plan.features.map((f, i) => (
-                                    <li key={i} className="flex items-start gap-2.5 text-sm text-slate-700 font-medium">
-                                        <CheckCircle2 size={16} className="text-emerald-500 flex-shrink-0 mt-0.5" />
-                                        {f}
-                                    </li>
-                                ))}
-                                {plan.missing.map((f, i) => (
-                                    <li key={i} className="flex items-start gap-2.5 text-sm text-slate-400 font-medium line-through">
-                                        <X size={16} className="text-slate-300 flex-shrink-0 mt-0.5" />
-                                        {f}
-                                    </li>
-                                ))}
-                            </ul>
-
-                            {currentPlan === plan.id ? (
-                                <div className="w-full text-center py-3 bg-emerald-50 text-emerald-700 font-bold text-sm rounded-xl border border-emerald-200">
-                                    ✓ Plan Actual
+                            <div className="p-10 flex-1 flex flex-col">
+                                <div className="mb-8 border-b border-slate-50 pb-8">
+                                    <span className={`text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg mb-4 inline-block ${
+                                        plan.id === 'pro' ? 'bg-brand-50 text-brand-600' : 'bg-slate-100 text-slate-500'
+                                    }`}>
+                                        {plan.badge}
+                                    </span>
+                                    <h3 className="text-2xl font-black text-slate-900 mb-2">{plan.name}</h3>
+                                    <div className="flex items-baseline gap-1">
+                                        <span className="text-4xl font-black text-slate-900 tracking-tight">{plan.price}</span>
+                                        <span className="text-slate-400 font-bold text-sm tracking-tight">{plan.period}</span>
+                                    </div>
+                                    <p className="text-slate-400 text-xs font-medium mt-4 line-clamp-2">
+                                        {plan.description}
+                                    </p>
                                 </div>
-                            ) : (
-                                <a
-                                    href={
-                                        plan.id === 'pro'
-                                            ? 'https://lemonsqueezy.com' // 🔧 Reemplazar con tu link de Lemon Squeezy
-                                            : plan.id === 'institution'
-                                            ? 'mailto:soporte@sdmaster.com' // 🔧 Reemplazar con tu email
-                                            : '#'
-                                    }
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className={`w-full flex items-center justify-center gap-2 py-3 font-bold text-sm rounded-xl transition-all ${plan.btnClass}`}
-                                >
-                                    {plan.btnLabel}
-                                    <ArrowRight size={16} />
-                                </a>
-                            )}
-                        </div>
+
+                                <ul className="space-y-4 mb-10">
+                                    {plan.features.map((f, i) => (
+                                        <li key={i} className="flex items-start gap-3 text-sm text-slate-700 font-bold group/feat">
+                                            <div className="w-5 h-5 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center shrink-0 mt-0.5 group-hover/feat:scale-110 transition-transform">
+                                                <CheckCircle2 size={12} />
+                                            </div>
+                                            {f}
+                                        </li>
+                                    ))}
+                                    {plan.missing.map((f, i) => (
+                                        <li key={i} className="flex items-start gap-3 text-sm text-slate-300 font-medium line-through">
+                                            <div className="w-5 h-5 bg-slate-50 text-slate-200 rounded-full flex items-center justify-center shrink-0 mt-0.5">
+                                                <X size={12} />
+                                            </div>
+                                            {f}
+                                        </li>
+                                    ))}
+                                </ul>
+
+                                <div className="mt-auto">
+                                    {currentPlan === plan.id ? (
+                                        <div className="w-full flex items-center justify-center gap-2 py-4 bg-emerald-50 text-emerald-600 font-black text-[10px] uppercase tracking-widest rounded-2xl border border-emerald-100">
+                                            <ShieldCheck size={16} /> Tu Plan Actual
+                                        </div>
+                                    ) : (
+                                        <PremiumButton
+                                            variant={plan.id === 'pro' ? 'primary' : 'secondary'}
+                                            className="w-full !py-4 !rounded-2xl !text-[11px] !font-black !uppercase !tracking-widest shadow-lg"
+                                            onClick={() => window.open(plan.id === 'pro' ? 'https://lemonsqueezy.com' : 'mailto:ventas@sdmaster.com', '_blank')}
+                                            icon={<ArrowRight size={16}/>}
+                                            iconPosition="right"
+                                        >
+                                            {plan.id === 'institution' ? 'Contactar' : 'Comenzar Ahora'}
+                                        </PremiumButton>
+                                    )}
+                                </div>
+                            </div>
+                        </PremiumCard>
                     ))}
                 </div>
 
-                {/* Footer note */}
-                <p className="text-center text-slate-400 text-sm mt-10 font-medium">
-                    Pagos seguros procesados por <strong>Lemon Squeezy</strong> · Cancelá cuando quieras · Precios en USD
-                </p>
+                {/* Trust Footer */}
+                <div className="flex flex-col md:flex-row items-center justify-center gap-8 pt-10 border-t border-slate-100">
+                    <p className="text-slate-400 text-[11px] font-black uppercase tracking-widest flex items-center gap-3">
+                        <ShieldCheck size={18} className="text-brand-500" /> Pagos Seguros con Lemon Squeezy
+                    </p>
+                    <div className="h-4 w-[1px] bg-slate-200 hidden md:block"></div>
+                    <p className="text-slate-400 text-[11px] font-black uppercase tracking-widest flex items-center gap-3">
+                        <Mail size={18} className="text-brand-500" /> Soporte Dedicado: hola@sdmaster.com
+                    </p>
+                </div>
 
                 {onClose && (
-                    <div className="text-center mt-6">
+                    <div className="text-center">
                         <button
                             onClick={onClose}
-                            className="text-slate-400 hover:text-slate-600 text-sm font-medium transition-colors"
+                            className="text-slate-300 hover:text-slate-600 font-black text-[10px] uppercase tracking-widest transition-all px-6 py-3 rounded-2xl hover:bg-slate-50"
                         >
-                            ← Volver al dashboard
+                            ← Ir a mi Escritorio
                         </button>
                     </div>
                 )}
