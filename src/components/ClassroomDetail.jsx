@@ -4,8 +4,9 @@ import { sequenceDbService } from '../lib/sequenceDbService';
 import { 
     ArrowLeft, Users, Eye, FileText, ClipboardCheck, MessageSquare, 
     Loader2, Save, Download, Activity, Plus, Search as SearchIcon, X, BookOpen, Zap,
-    Circle as CircleIcon, Trash2, Calendar, Target, ExternalLink, Award, ChevronRight,
-    CheckCircle2, AlertTriangle, HelpCircle, History as HistoryIcon, Info, Filter, Clock
+    Circle as CircleIcon, Trash2, Calendar, Target, ExternalLink, Award, ChevronRight, ChevronLeft,
+    CheckCircle2, AlertTriangle, HelpCircle, History as HistoryIcon, Info, Filter, Clock,
+    MousePointerClick, Sparkles
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -349,393 +350,279 @@ const ClassroomDetail = ({ classroom, onBack }) => {
     if (selectedAssignment) {
         const gradedCount = submissions.filter(s => s.is_graded).length;
         const pendingCount = submissions.length - gradedCount;
+        const assignmentTypeLabel = selectedAssignment.item_type === 'assessment' ? 'Evaluación' : 'Secuencia';
+
+        const submittedStudents = students.filter(st => submissions.some(s => s.student_id === st.student_id));
+        const currentSubIndex = selectedSubmission ? submittedStudents.findIndex(st => st.student_id === selectedSubmission.student_id) : -1;
+
+        const handleNextStudent = () => {
+            if (currentSubIndex < submittedStudents.length - 1) {
+                const st = submittedStudents[currentSubIndex + 1];
+                const sub = submissions.find(s => s.student_id === st.student_id);
+                handleSelectSubmission(sub);
+            }
+        };
+
+        const handlePrevStudent = () => {
+             if (currentSubIndex > 0) {
+                const st = submittedStudents[currentSubIndex - 1];
+                const sub = submissions.find(s => s.student_id === st.student_id);
+                handleSelectSubmission(sub);
+            }
+        };
 
         return (
-            <div className="fixed inset-0 z-[120] bg-[#F8FAFC] flex flex-col animate-fade-in overflow-hidden">
-                {/* Header Premium */}
-                <header className="bg-white/90 backdrop-blur-2xl px-10 py-6 border-b border-slate-100 flex items-center justify-between flex-shrink-0 relative z-20">
-                    <div className="flex items-center gap-6">
+            <div className="fixed inset-0 z-[120] bg-[#f8fafc] flex flex-col font-inter animate-fade-in overflow-hidden">
+                {/* ── Fixed Global Header ── */}
+                <header className="bg-white/90 backdrop-blur-2xl px-6 py-4 border-b border-slate-100 flex items-center justify-between flex-shrink-0 relative z-20 shadow-sm">
+                    {/* Left: Back and Assignment Info */}
+                    <div className="flex items-center gap-4 min-w-0 flex-1">
                         <button 
                             onClick={() => { setSelectedAssignment(null); setSelectedSubmission(null); }} 
-                            className="w-12 h-12 bg-white border border-slate-200 rounded-2xl hover:bg-slate-50 transition-all flex items-center justify-center group shadow-sm hover:shadow-md active:scale-95"
-                            title="Volver al Aula"
+                            className="w-10 h-10 bg-slate-50 hover:bg-slate-100 text-slate-400 hover:text-slate-600 rounded-xl flex items-center justify-center transition-all border border-slate-100 shrink-0 shadow-sm"
                         >
-                            <ArrowLeft size={20} className="text-slate-500 group-hover:-translate-x-1 transition-transform" />
+                            <ArrowLeft size={20} />
                         </button>
-                        <div className="min-w-0">
-                            <div className="flex items-center gap-3 mb-1.5 overflow-x-auto no-scrollbar">
-                                <span className={`text-[10px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-lg ${
-                                    selectedAssignment.item_type === 'assessment' 
-                                    ? 'bg-rose-100 text-rose-700' 
-                                    : 'bg-brand-100 text-brand-700'
-                                }`}>
-                                    {selectedAssignment.item_type === 'assessment' ? 'Examen Final' : 'Actividad Práctica'}
-                                </span>
-                                <div className="h-4 w-px bg-slate-200 mx-1" />
-                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                                    <Users size={12} className="text-brand-500" /> {students.length} Estudiantes
-                                </span>
+                        <div className="min-w-0 pr-4">
+                            <span className="text-[10px] uppercase tracking-widest font-black text-slate-400 mb-0.5 block truncate">{selectedAssignment.title}</span>
+                            <div className="flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                                <span className="text-[11px] font-black text-slate-800">{gradedCount} evaluados</span>
+                                <span className="text-slate-300">/</span>
+                                <span className="text-[11px] font-bold text-slate-500">{submissions.length} entregas</span>
                             </div>
-                            <h2 className="text-2xl font-black text-slate-900 tracking-tight leading-none truncate max-w-xl">
-                                {selectedAssignment.title}
-                            </h2>
                         </div>
                     </div>
 
-                    {/* Stats summary */}
-                    <div className="hidden lg:flex items-center gap-8 bg-slate-50/50 border border-slate-100 px-8 py-3 rounded-[2rem]">
-                        <div className="flex items-center gap-4">
-                            <div className="text-right">
-                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Calificados</p>
-                                <p className="text-xl font-black text-emerald-600 leading-none">{gradedCount}</p>
+                    {/* Center: Student Navigation */}
+                    {selectedSubmission ? (
+                        <div className="flex items-center gap-4 flex-1 justify-center">
+                            <button 
+                                onClick={handlePrevStudent} 
+                                disabled={currentSubIndex <= 0}
+                                className="w-10 h-10 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-slate-600 hover:bg-slate-50 hover:border-brand-300 hover:text-brand-600 disabled:opacity-30 disabled:hover:bg-white disabled:hover:border-slate-200 disabled:hover:text-slate-600 transition-all shadow-sm active:scale-95"
+                            >
+                                <ChevronLeft size={20} />
+                            </button>
+                            
+                            <div className="flex flex-col items-center bg-brand-50/50 px-8 py-2 rounded-xl border border-brand-100 min-w-[200px] shadow-sm">
+                                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-brand-400 mb-0.5 flex items-center gap-1.5"><Users size={10}/> Viendo Entrega</span>
+                                <span className="text-sm font-black text-brand-800 tracking-tight truncate max-w-[200px]">
+                                    {submittedStudents[currentSubIndex]?.profiles?.full_name || 'Estudiante'}
+                                </span>
                             </div>
-                            <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center">
-                                <CheckCircle2 size={16} />
-                            </div>
+
+                            <button 
+                                onClick={handleNextStudent} 
+                                disabled={currentSubIndex >= submittedStudents.length - 1 || currentSubIndex === -1}
+                                className="w-10 h-10 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-slate-600 hover:bg-slate-50 hover:border-brand-300 hover:text-brand-600 disabled:opacity-30 disabled:hover:bg-white disabled:hover:border-slate-200 disabled:hover:text-slate-600 transition-all shadow-sm active:scale-95"
+                            >
+                                <ChevronRight size={20} />
+                            </button>
                         </div>
-                        <div className="w-px h-8 bg-slate-200" />
-                        <div className="flex items-center gap-4">
-                            <div className="text-right">
-                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Pendientes</p>
-                                <p className="text-xl font-black text-amber-600 leading-none">{pendingCount}</p>
-                            </div>
-                            <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center">
-                                <Clock size={16} className="animate-pulse" />
-                            </div>
-                        </div>
+                    ) : (
+                         <div className="flex-1 flex justify-center">
+                             <div className="bg-amber-50 text-amber-600 px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest border border-amber-100 flex items-center gap-2 shadow-sm">
+                                 <MousePointerClick size={16}/> Selecciona una entrega debajo
+                             </div>
+                         </div>
+                    )}
+
+                    {/* Right: Actions / Status */}
+                    <div className="flex items-center gap-4 flex-1 justify-end">
+                         {selectedSubmission?.is_graded ? (
+                             <div className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-600 rounded-xl border border-emerald-100 text-[10px] xl:text-xs font-black uppercase tracking-widest shadow-sm">
+                                 <CheckCircle2 size={16}/> Calificado ({selectedSubmission.final_score}/10)
+                             </div>
+                         ) : selectedSubmission ? (
+                             <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 text-amber-600 rounded-xl border border-amber-100 text-[10px] xl:text-xs font-black uppercase tracking-widest shadow-sm">
+                                  <Clock size={16}/> Espera Clasificación
+                             </div>
+                         ) : null}
                     </div>
                 </header>
 
-                <div className="flex flex-1 overflow-hidden relative z-10">
-                    {/* Alumnos List Sidebar */}
-                    <div className="w-96 bg-white border-r border-slate-100 flex flex-col flex-shrink-0 animate-slide-right relative z-10">
-                        <div className="p-8 border-b border-slate-50 bg-slate-50/20 space-y-4">
-                            <div className="flex items-center justify-between">
-                                <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Listado Académico</h3>
-                                <Filter size={14} className="text-slate-300" />
-                            </div>
-                        </div>
-                        
-                        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-3">
-                            {students.map(student => {
-                                const sub = submissions.find(s => s.student_id === student.student_id);
-                                const isSelected = selectedSubmission?.student_id === student.student_id;
+                <main className="flex-1 flex overflow-hidden relative z-10 bg-[#f8fafc]">
+                    {!selectedSubmission ? (
+                        <div className="flex-1 overflow-y-auto p-10 lg:p-14 custom-scrollbar">
+                            <div className="max-w-6xl mx-auto">
+                                <h3 className="text-2xl font-black text-slate-800 mb-8 flex items-center gap-3">
+                                    <ClipboardCheck size={24} className="text-brand-500" />
+                                    Entregas Recibidas
+                                </h3>
                                 
-                                return (
-                                    <button 
-                                        key={student.student_id}
-                                        onClick={() => sub ? handleSelectSubmission(sub) : null}
-                                        disabled={!sub}
-                                        className={`w-full text-left p-5 rounded-[2rem] transition-all duration-300 flex items-center gap-4 border-2 ${
-                                            !sub ? 'opacity-30 bg-white border-transparent grayscale' :
-                                            isSelected 
-                                            ? 'bg-brand-500 border-brand-500 text-white shadow-xl shadow-brand-500/20 translate-x-2' 
-                                            : 'bg-white border-slate-50 hover:border-brand-100 hover:bg-slate-50/50 shadow-sm'
-                                        }`}
-                                    >
-                                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg shrink-0 transition-colors shadow-sm ${
-                                            isSelected ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-400'
-                                        }`}>
-                                            {student.profiles?.full_name?.charAt(0) || 'E'}
-                                        </div>
-                                        
-                                        <div className="min-w-0 flex-grow">
-                                            <p className={`text-sm font-black truncate leading-tight ${isSelected ? 'text-white' : 'text-slate-800'}`}>
-                                                {student.profiles?.full_name || 'Estudiante'}
-                                            </p>
-                                            <div className="flex items-center gap-2 mt-1">
-                                                {!sub ? (
-                                                    <span className="text-[8px] font-black uppercase tracking-widest text-slate-300">Sin entrega</span>
-                                                ) : sub.is_graded ? (
-                                                    <span className={`text-[8px] font-black uppercase tracking-widest flex items-center gap-1 ${isSelected ? 'text-white/70' : 'text-emerald-500'}`}>
-                                                        <CheckCircle2 size={8}/> Calificado
-                                                    </span>
-                                                ) : (
-                                                    <span className={`text-[8px] font-black uppercase tracking-widest flex items-center gap-1 ${isSelected ? 'text-white' : 'text-amber-500'} animate-pulse`}>
-                                                        <Clock size={8}/> Esperando
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        <div className="shrink-0 ml-2">
-                                            {sub?.is_graded ? (
-                                                <div className={`px-2 py-1.5 rounded-xl font-black text-xs border transition-all ${
-                                                    isSelected 
-                                                    ? 'bg-white/20 border-white/30 text-white' 
-                                                    : sub.final_score >= 7 
-                                                        ? 'bg-emerald-50 border-emerald-100 text-emerald-600' 
-                                                        : 'bg-rose-50 border-rose-100 text-rose-600'
-                                                }`}>
-                                                    {sub.final_score}
-                                                </div>
-                                            ) : sub ? (
-                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all ${
-                                                    isSelected ? 'border-white/30 text-white' : 'border-slate-100 text-slate-300'
-                                                }`}>
-                                                    <ChevronRight size={14}/>
-                                                </div>
-                                            ) : (
-                                                <CircleIcon size={14} className="text-slate-100" />
-                                            )}
-                                        </div>
-                                    </button>
-                                );
-                            })}
+                                {submissions.length === 0 ? (
+                                    <div className="bg-white border border-dashed border-slate-200 rounded-2xl p-16 text-center shadow-sm">
+                                        <HistoryIcon size={40} className="mx-auto text-slate-300 mb-6" />
+                                        <h3 className="text-xl font-black text-slate-800 mb-2">Ningún alumno ha entregado aún</h3>
+                                        <p className="text-slate-500 font-medium">Cuando los estudiantes completen la tarea, aparecerán en este panel.</p>
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                        {students.map(student => {
+                                            const sub = submissions.find(s => s.student_id === student.student_id);
+                                            return (
+                                                <button 
+                                                    key={student.student_id}
+                                                    onClick={() => sub ? handleSelectSubmission(sub) : null}
+                                                    disabled={!sub}
+                                                    className={`text-left p-6 rounded-2xl transition-all border bg-white ${
+                                                        !sub ? 'opacity-50 grayscale border-slate-100 cursor-not-allowed' : 'border-slate-200 hover:border-brand-300 hover:shadow-md cursor-pointer'
+                                                    }`}
+                                                >
+                                                    <div className="flex items-center gap-4 mb-4">
+                                                        <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center font-black text-slate-400">
+                                                            {student.profiles?.full_name?.charAt(0) || 'E'}
+                                                        </div>
+                                                        <div className="min-w-0">
+                                                            <p className="font-black text-slate-900 leading-tight truncate">{student.profiles?.full_name}</p>
+                                                            {sub?.is_graded ? (
+                                                                <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest flex items-center gap-1 mt-1"><CheckCircle2 size={10}/> Nota: {sub.final_score}</span>
+                                                            ) : sub ? (
+                                                                <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest flex items-center gap-1 mt-1"><Clock size={10}/> Para evaluar</span>
+                                                            ) : (
+                                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1 block">Falta entregar</span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    {sub?.ai_score_suggested && !sub.is_graded && (
+                                                        <div className="flex justify-between items-center px-4 py-2 bg-purple-50 rounded-lg">
+                                                            <span className="text-[10px] font-black uppercase tracking-widest text-purple-600 flex items-center gap-1.5"><Sparkles size={10}/> Sugerido IA</span>
+                                                            <span className="text-xs font-black text-purple-700">{sub.ai_score_suggested}/10</span>
+                                                        </div>
+                                                    )}
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
+                                )}
+                            </div>
                         </div>
-                    </div>
+                    ) : (
+                        <>
 
-                    {/* Correction Content */}
-                    <div className="flex-1 bg-slate-50/50 overflow-hidden flex flex-col relative">
+                    {/* ── Pane 2: Student Work (Center) ── */}
+                    <div className="flex-1 bg-white overflow-y-auto custom-scrollbar relative">
                         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(99,102,241,0.03),transparent)] pointer-events-none" />
-                        
-                        {selectedSubmission ? (
-                            <div className="flex-1 flex overflow-hidden p-8 gap-8 relative z-10">
-                                {/* Student Work Workspace */}
-                                <div className="flex-1 flex flex-col min-w-0">
-                                    <div className="flex-1 bg-white rounded-[3rem] border border-slate-100 shadow-xl shadow-slate-200/50 flex flex-col overflow-hidden animate-scale-up">
-                                        <div className="px-10 py-8 border-b border-slate-50 bg-white flex items-center justify-between shrink-0">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center shadow-inner">
-                                                    <FileText size={22} />
-                                                </div>
-                                                <div>
-                                                    <h3 className="text-xl font-black text-slate-900 tracking-tight">Producción del Alumno</h3>
-                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Visor Académico de Entrega</p>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-xl border border-slate-100">
-                                                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                                                <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Documento Verificado</span>
-                                            </div>
-                                        </div>
+                        <div className="p-10 lg:p-14 w-full max-w-5xl mx-auto pb-32 animate-fade-in relative z-10">
+                            <div className="flex items-center justify-between mb-8">
+                                <div>
+                                    <h3 className="text-3xl font-black text-slate-900 tracking-tight leading-none">Producción Académica</h3>
+                                </div>
+                                <div className="flex gap-3">
+                                    <PremiumButton onClick={() => window.open(`/classroom/${classroom.id}/assignment/${selectedAssignment.id}/edit`, '_blank')} variant="secondary" icon={<Plus size={16} />} className="!py-2 !px-5 !rounded-lg !text-xs">Ver Consigna Base</PremiumButton>
+                                </div>
+                            </div>
 
-                                        <div className="flex-1 overflow-y-auto p-12 custom-scrollbar space-y-16 bg-slate-50/20">
-                                            {(() => {
-                                                try {
-                                                    const parsed = JSON.parse(selectedSubmission.content);
-                                                    if (parsed.responses) {
-                                                        return (
-                                                            <div className="max-w-4xl mx-auto space-y-12 pb-20">
-                                                                {parsed.extracted_exercises?.map((ex, i) => (
-                                                                    <div key={ex.id || i} className="group relative">
-                                                                        <div className="absolute -left-4 top-0 bottom-0 w-1 bg-brand-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
-                                                                        
-                                                                        <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-brand-500/5 transition-all duration-500 overflow-hidden">
-                                                                            <div className="px-10 py-6 border-b border-slate-50 bg-slate-50/30 flex justify-between items-center">
-                                                                                <div className="flex items-center gap-3">
-                                                                                    <span className="w-8 h-8 bg-brand-600 text-white rounded-xl flex items-center justify-center text-xs font-black shadow-lg shadow-brand-500/20">
-                                                                                        {i + 1}
-                                                                                    </span>
-                                                                                    <span className="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em]">Consigna del Docente</span>
-                                                                                </div>
-                                                                            </div>
-                                                                            
-                                                                            <div className="p-10 space-y-10">
-                                                                                <div className="text-lg text-slate-700 leading-relaxed font-medium academic-text prose prose-slate max-w-none">
-                                                                                    <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex, rehypeRaw]}>
-                                                                                        {ex.content}
-                                                                                    </ReactMarkdown>
-                                                                                </div>
-                                                                                
-                                                                                <div className="relative pt-6">
-                                                                                    <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-slate-100 to-transparent" />
-                                                                                    <div className="flex items-center gap-3 mb-6">
-                                                                                        <div className="w-2 h-2 rounded-full bg-brand-500" />
-                                                                                        <span className="text-[10px] font-black text-brand-600 uppercase tracking-[0.2em]">Respuesta Elaborada</span>
-                                                                                    </div>
-                                                                                    <div className="bg-brand-50/30 p-10 rounded-[2rem] border-2 border-brand-100/50 relative group/resp hover:bg-white hover:border-brand-500/20 transition-all duration-300">
-                                                                                        <div className="text-slate-800 leading-relaxed font-semibold italic text-lg">
-                                                                                            <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex, rehypeRaw]}>
-                                                                                                {parsed.responses[ex.id] || "*(Sin respuesta)*"}
-                                                                                            </ReactMarkdown>
-                                                                                        </div>
-                                                                                    </div>
-                                                                                </div>
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                ))}
-                                                                
-                                                                {(!parsed.extracted_exercises || parsed.extracted_exercises.length === 0) && (
-                                                                    <div className="bg-amber-50 rounded-[2rem] p-10 text-amber-700 text-sm italic flex gap-4 border border-amber-100 shadow-inner">
-                                                                        <AlertTriangle size={24} className="shrink-0" /> 
-                                                                        <div>
-                                                                            <p className="font-black uppercase tracking-widest text-[10px] mb-2 text-amber-800">Aviso de Estructura</p>
-                                                                            <p className="leading-relaxed font-medium">Este trabajo no contiene ejercicios estructurados detectables por el sistema. Mostrando el contenido bruto de la entrega.</p>
-                                                                        </div>
-                                                                    </div>
-                                                                )}
+                            {(() => {
+                                try {
+                                    const parsed = JSON.parse(selectedSubmission.content);
+                                    if (parsed.responses) {
+                                        return (
+                                            <div className="space-y-12">
+                                                {parsed.extracted_exercises?.map((ex, i) => (
+                                                    <div key={ex.id || i} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                                                        <div className="px-10 py-6 border-b border-slate-100 bg-slate-50 flex items-center gap-3">
+                                                            <span className="w-8 h-8 bg-brand-600 text-white rounded-lg flex items-center justify-center text-xs font-black shadow-sm">{i + 1}</span>
+                                                            <span className="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em]">Consigna Original</span>
+                                                        </div>
+                                                        <div className="p-10 space-y-10">
+                                                            <div className="text-lg text-slate-700 leading-relaxed academic-text prose max-w-none">
+                                                                <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex, rehypeRaw]}>{ex.content}</ReactMarkdown>
                                                             </div>
-                                                        );
-                                                    }
-                                                } catch (e) {}
-                                                
-                                                return (
-                                                    <div className="max-w-4xl mx-auto bg-white p-12 rounded-[3.5rem] border border-slate-100 shadow-2xl shadow-slate-200/50 academic-text text-xl leading-loose text-slate-800">
-                                                        <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex, rehypeRaw]}>
-                                                            {selectedSubmission.content}
-                                                        </ReactMarkdown>
+                                                            <div className="relative pt-8">
+                                                                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
+                                                                <div className="flex items-center gap-3 mb-6"><div className="w-2 h-2 rounded-full bg-brand-500 ring-4 ring-brand-50" /><span className="text-[10px] font-black text-brand-600 uppercase tracking-[0.2em]">Respuesta</span></div>
+                                                                <div className="bg-brand-50 p-8 rounded-xl border border-brand-100/60">
+                                                                    <div className="text-slate-800 leading-relaxed font-semibold italic text-lg">
+                                                                        <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex, rehypeRaw]}>{parsed.responses[ex.id] || "*(Sin respuesta)*"}</ReactMarkdown>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
                                                     </div>
-                                                );
-                                            })()}
-                                        </div>
+                                                ))}
+                                            </div>
+                                        );
+                                    }
+                                } catch (e) {}
+                                return (
+                                    <div className="bg-white p-10 rounded-2xl border border-slate-200 shadow-sm academic-text text-xl leading-loose text-slate-800">
+                                        <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex, rehypeRaw]}>{selectedSubmission.content}</ReactMarkdown>
                                     </div>
-                                </div>
-
-                                {/* Sidebar de Calificación Premium */}
-                                <div className="w-[480px] flex flex-col gap-8 animate-slide-left shrink-0 pb-10 custom-scrollbar overflow-y-auto">
-                                    {/* Card de IA con Smart Actions */}
-                                    {selectedSubmission.ai_score_suggested && (
-                                        <div className="bg-[#1E1B4B] rounded-[3.5rem] p-10 text-white shadow-2xl shadow-indigo-950/20 relative overflow-hidden group border border-white/5">
-                                            <div className="absolute top-0 right-0 p-10 opacity-5 group-hover:scale-110 transition-transform duration-1000">
-                                                <Activity size={200} />
-                                            </div>
-                                            
-                                            <div className="relative z-10 flex justify-between items-start mb-8">
-                                                <div>
-                                                    <div className="px-3 py-1 bg-white/10 backdrop-blur-md rounded-lg text-[10px] font-black uppercase tracking-[0.2em] inline-flex items-center gap-2 border border-white/10 mb-4 text-indigo-200">
-                                                        <Zap size={12} className="fill-indigo-400 text-indigo-400" /> IA Evaluadora
-                                                    </div>
-                                                    <h4 className="text-2xl font-black tracking-tight text-white leading-tight">Análisis Predictivo</h4>
-                                                </div>
-                                                <div className="flex flex-col items-end">
-                                                    <span className="text-7xl font-black text-white leading-none tracking-tighter tabular-nums">{selectedSubmission.ai_score_suggested}</span>
-                                                    <span className="text-indigo-400 font-bold uppercase tracking-widest text-[10px] mt-2">Puntaje IA</span>
-                                                </div>
-                                            </div>
-
-                                            <div className="relative z-10 bg-white/5 backdrop-blur-sm rounded-[2rem] p-8 border border-white/10 mb-8 max-h-64 overflow-y-auto custom-scrollbar-white">
-                                                <div className="text-indigo-100 text-sm leading-relaxed font-medium academic-preview prose prose-invert prose-sm">
-                                                    <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex, rehypeRaw]}>
-                                                        {formatAiFeedback(selectedSubmission.ai_feedback)}
-                                                    </ReactMarkdown>
-                                                </div>
-                                            </div>
-
-                                            <button 
-                                                onClick={handleApplyAiSuggestion}
-                                                className="relative z-10 w-full bg-white text-brand-900 py-5 rounded-[1.5rem] font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-3 hover:bg-brand-50 hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-black/20 group/btn overflow-hidden"
-                                            >
-                                                <div className="absolute inset-0 bg-gradient-to-r from-brand-500/0 via-brand-500/10 to-brand-500/0 -translate-x-full group-hover/btn:animate-[shimmer_1s_infinite]" />
-                                                <Plus size={18} /> Aplicar Sugerencia IA
-                                            </button>
-                                        </div>
-                                    )}
-
-                                    {/* Panel Principal de Calificación */}
-                                    <div className="bg-white rounded-[3.5rem] p-10 border border-slate-100 shadow-2xl shadow-slate-200/50 flex-grow flex flex-col space-y-10 relative overflow-hidden">
-                                        <div className="absolute top-0 right-0 w-32 h-32 bg-slate-50 rounded-bl-[6rem] -z-10" />
-                                        
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center">
-                                                <CheckCircle2 size={24} />
-                                            </div>
-                                            <h4 className="text-xl font-black text-slate-800 tracking-tight">Veredicto Final</h4>
-                                        </div>
-
-                                        <div className="space-y-8">
-                                            <div className="bg-slate-50/50 p-8 rounded-[2.5rem] border border-slate-100 group focus-within:bg-white focus-within:border-brand-500/30 transition-all duration-300">
-                                                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 block mb-6 px-2">Calificación Numérica (1-10)</label>
-                                                <div className="flex items-center gap-6">
-                                                    <div className="relative flex-grow">
-                                                        <input 
-                                                            type="number" min="1" max="10" step="0.5"
-                                                            value={editScore}
-                                                            onChange={(e) => setEditScore(e.target.value)}
-                                                            className="w-full bg-transparent text-7xl font-black text-slate-900 border-none p-0 focus:ring-0 placeholder:text-slate-100"
-                                                            placeholder="0"
-                                                        />
-                                                        <div className="absolute bottom-4 right-0 text-slate-300 font-black text-2xl">/ 10</div>
-                                                    </div>
-                                                    <div className="flex flex-col gap-2">
-                                                        <button onClick={() => setEditScore(prev => Math.min(10, parseFloat(prev || 0) + 0.5).toString())} className="w-10 h-10 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-slate-600 hover:text-brand-600 hover:border-brand-600 transition-all active:scale-90 shadow-sm">+</button>
-                                                        <button onClick={() => setEditScore(prev => Math.max(0, parseFloat(prev || 0) - 0.5).toString())} className="w-10 h-10 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-slate-600 hover:text-brand-600 hover:border-brand-600 transition-all active:scale-90 shadow-sm">-</button>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div className="space-y-4">
-                                                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 px-2 flex justify-between items-center">
-                                                    <span>Devolución al Alumno</span>
-                                                    <span className="text-brand-500 lowercase font-medium tracking-tight">markdown compatible</span>
-                                                </label>
-                                                <textarea 
-                                                    value={editFeedback}
-                                                    onChange={(e) => setEditFeedback(e.target.value)}
-                                                    rows="8"
-                                                    className="w-full bg-slate-50 rounded-[2rem] p-8 text-base font-semibold text-slate-700 leading-relaxed border-2 border-transparent focus:border-brand-500/20 focus:ring-8 focus:ring-brand-500/5 focus:bg-white transition-all resize-none custom-scrollbar"
-                                                    placeholder="Escribe tus observaciones pedagógicas aquí..."
-                                                />
-                                            </div>
-
-                                            <PremiumButton 
-                                                onClick={handleSaveGrade}
-                                                loading={isSavingGrade}
-                                                disabled={!editScore}
-                                                className="w-full !py-8 !rounded-[2rem] text-sm shadow-2xl shadow-brand-500/30 font-black uppercase tracking-[0.2em]"
-                                                icon={<Save size={22} />}
-                                            >
-                                                Publicar Nota Final
-                                            </PremiumButton>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="flex-1 flex flex-col items-center justify-center p-20 text-center animate-fade-in select-none">
-                                <div className="relative mb-12">
-                                    <div className="absolute inset-0 bg-brand-500/10 blur-[100px] rounded-full" />
-                                    <div className="w-40 h-40 bg-white rounded-[3rem] border border-slate-100 shadow-2xl flex items-center justify-center relative z-10">
-                                        <SearchIcon size={80} className="text-slate-100 group-hover:scale-110 transition-transform" />
-                                        <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-brand-500 text-white rounded-2xl flex items-center justify-center shadow-2xl transform rotate-12">
-                                            <Activity size={32} />
-                                        </div>
-                                    </div>
-                                </div>
-                                <h3 className="text-4xl font-black text-slate-900 tracking-tight mb-4">Módulo de Corrección</h3>
-                                <p className="text-slate-500 font-semibold text-lg max-w-lg leading-relaxed">
-                                    Selecciona un estudiante del panel lateral para comenzar el proceso de evaluación y feedback personalizado.
-                                </p>
-                                <div className="mt-12 flex gap-4">
-                                    <div className="flex items-center gap-3 px-6 py-3 bg-emerald-50 text-emerald-700 rounded-2xl border border-emerald-100 font-bold text-sm">
-                                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" /> {gradedCount} Calificados
-                                    </div>
-                                    <div className="flex items-center gap-3 px-6 py-3 bg-amber-50 text-amber-700 rounded-2xl border border-amber-100 font-bold text-sm">
-                                        <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" /> {pendingCount} Pendientes
-                                    </div>
-                                </div>
-                            </div>
-                        )}
+                                );
+                            })()}
+                        </div>
                     </div>
-                </div>
-                {/* Modal Confirmar Eliminación Actividad */}
-                <PremiumModal 
-                    isOpen={!!isDeletingActivity} 
-                    onClose={() => setIsDeletingActivity(null)}
-                    title="¿Remover Actividad?"
-                    maxWidth="max-w-md"
-                >
+
+                    {/* ── Pane 3: Grading Sidebar (Right) ── */}
+                    <aside className="w-[400px] bg-slate-50/80 border-l border-slate-100 flex flex-col overflow-y-auto custom-scrollbar shrink-0 shadow-[-10px_0_30px_rgba(0,0,0,0.02)]">
+                            <div className="p-8 xl:p-10 space-y-8 min-h-full">
+                                {selectedSubmission.ai_score_suggested && (
+                                    <div className="bg-slate-900 rounded-2xl p-6 text-white relative overflow-hidden group shadow-md border border-slate-800">
+                                        <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-110 transition-transform duration-1000"><Activity size={150} /></div>
+                                        <div className="relative z-10 flex justify-between items-start mb-6">
+                                            <div>
+                                                <div className="px-2.5 py-1 bg-white/10 rounded-md text-[9px] font-black uppercase tracking-[0.2em] inline-flex items-center gap-1.5 mb-3 text-indigo-200 border border-white/10"><Zap size={10} className="text-indigo-400" /> IA Evaluadora</div>
+                                                <h4 className="text-lg font-black tracking-tight text-white leading-tight">Análisis Predictivo</h4>
+                                            </div>
+                                            <div className="flex flex-col items-end">
+                                                <span className="text-5xl font-black text-white leading-none tracking-tighter drop-shadow-md">{selectedSubmission.ai_score_suggested}</span>
+                                                <span className="text-indigo-400 font-bold uppercase tracking-widest text-[9px] mt-2">Puntaje IA</span>
+                                            </div>
+                                        </div>
+                                        <div className="relative z-10 bg-white/5 backdrop-blur-md rounded-xl p-5 border border-white/10 mb-6 max-h-56 overflow-y-auto custom-scrollbar-white">
+                                            <div className="text-indigo-100 text-[12px] leading-relaxed font-semibold academic-preview prose prose-invert prose-sm">
+                                                <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex, rehypeRaw]}>{formatAiFeedback(selectedSubmission.ai_feedback)}</ReactMarkdown>
+                                            </div>
+                                        </div>
+                                        <button onClick={handleApplyAiSuggestion} className="relative z-10 w-full bg-white text-slate-900 py-3 rounded-xl font-black text-[11px] uppercase tracking-[0.2em] flex items-center justify-center gap-2 hover:bg-slate-50 hover:scale-[1.02] active:scale-95 transition-all shadow-sm group/btn overflow-hidden">
+                                            <div className="absolute inset-0 bg-gradient-to-r from-slate-200/0 via-slate-200/50 to-slate-200/0 -translate-x-full group-hover/btn:animate-[shimmer_1s_infinite]" />
+                                            <Plus size={16} /> Aplicar Sugerencia
+                                        </button>
+                                    </div>
+                                )}
+                                <div className="bg-white rounded-2xl p-8 border border-slate-200 shadow-md flex flex-col space-y-6 relative overflow-hidden">
+                                    <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-50 rounded-bl-full -z-10" />
+                                    <div className="flex items-center gap-3"><div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center"><CheckCircle2 size={20} /></div><h4 className="text-lg font-black text-slate-800 tracking-tight">Veredicto Final</h4></div>
+                                    <div className="space-y-6">
+                                        <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 focus-within:bg-white focus-within:ring-2 focus-within:ring-brand-500/20 focus-within:border-brand-300 transition-all">
+                                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 block mb-4 px-1">Calificación Numérica (1-10)</label>
+                                            <div className="flex items-center gap-4">
+                                                <div className="relative flex-grow">
+                                                    <input type="number" min="1" max="10" step="0.5" value={editScore} onChange={(e) => setEditScore(e.target.value)} className="w-full bg-transparent text-5xl font-black text-slate-900 border-none p-0 focus:ring-0 placeholder:text-slate-200" placeholder="0" /><div className="absolute bottom-2 right-0 text-slate-300 font-black text-xl">/ 10</div>
+                                                </div>
+                                                <div className="flex flex-col gap-2 shrink-0">
+                                                    <button onClick={() => setEditScore(prev => Math.min(10, parseFloat(prev || 0) + 0.5).toString())} className="w-10 h-10 bg-white border border-slate-200 rounded-lg flex items-center justify-center text-slate-600 hover:text-brand-600 hover:border-brand-600 transition-all active:scale-95 shadow-sm">+</button>
+                                                    <button onClick={() => setEditScore(prev => Math.max(0, parseFloat(prev || 0) - 0.5).toString())} className="w-10 h-10 bg-white border border-slate-200 rounded-lg flex items-center justify-center text-slate-600 hover:text-brand-600 hover:border-brand-600 transition-all active:scale-95 shadow-sm">-</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-3">
+                                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 px-1">Devolución al Alumno</label>
+                                            <textarea value={editFeedback} onChange={(e) => setEditFeedback(e.target.value)} rows="5" className="w-full bg-white rounded-xl p-4 text-sm font-semibold text-slate-700 leading-relaxed border border-slate-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-500 transition-all resize-none custom-scrollbar" placeholder="Escribe tus observaciones pedagógicas aquí..." />
+                                        </div>
+                                        <PremiumButton onClick={handleSaveGrade} loading={isSavingGrade} disabled={!editScore} className="w-full !py-4 !rounded-xl text-xs font-bold uppercase tracking-widest shadow-sm hover:shadow-md" icon={<Save size={18} />}>Publicar Nota Final</PremiumButton>
+                                    </div>
+                                </div>
+                            </div>
+                        </aside>
+                        </>
+                    )}
+                </main>
+
+                <PremiumModal isOpen={!!isDeletingActivity} onClose={() => setIsDeletingActivity(null)} title="¿Remover Actividad?" maxWidth="max-w-md">
                     <div className="space-y-6 text-center py-4">
-                        <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-[2rem] flex items-center justify-center mx-auto mb-6">
-                            <Trash2 size={32} />
-                        </div>
-                        <div>
-                            <h3 className="text-xl font-black text-slate-900 mb-2">Acción Crítica</h3>
-                            <p className="text-sm text-slate-500 font-medium leading-relaxed">
-                                Estás por remover <span className="text-slate-900 font-black">"{isDeletingActivity?.title}"</span> de este aula. 
-                                Los alumnos ya no podrán verla ni entregar trabajos.
-                            </p>
-                        </div>
-                        <div className="flex gap-4 pt-4">
-                            <PremiumButton variant="secondary" onClick={() => setIsDeletingActivity(null)} className="flex-1">Conservar</PremiumButton>
-                            <PremiumButton onClick={handleDeleteAssignment} className="flex-1 !bg-rose-500 hover:!bg-rose-600 shadow-rose-200">Remover</PremiumButton>
-                        </div>
+                        <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-[2rem] flex items-center justify-center mx-auto mb-6"><Trash2 size={32} /></div>
+                        <div><h3 className="text-xl font-black text-slate-900 mb-2">Acción Crítica</h3><p className="text-sm text-slate-500 font-medium leading-relaxed">Estás por remover <span className="text-slate-900 font-black">"{isDeletingActivity?.title}"</span>. Alumnos ya no podrán verla ni entregar trabajos.</p></div>
+                        <div className="flex gap-4 pt-4"><PremiumButton variant="secondary" onClick={() => setIsDeletingActivity(null)} className="flex-1">Conservar</PremiumButton><PremiumButton onClick={handleDeleteAssignment} className="flex-1 !bg-rose-500 hover:!bg-rose-600 shadow-rose-200">Remover</PremiumButton></div>
                     </div>
                 </PremiumModal>
             </div>
         );
     }
+
+
 
     // ======== VISTA GENERAL ========
     return (
@@ -761,15 +648,15 @@ const ClassroomDetail = ({ classroom, onBack }) => {
                     </div>
                     <h1 className="text-4xl font-black text-slate-900 tracking-tight leading-none mb-2 truncate">{classroom.name}</h1>
                 </div>
-                <div className="hidden md:flex gap-8 px-8 py-4 bg-white border border-slate-100 rounded-[2.5rem] shadow-sm">
+                <div className="hidden md:flex gap-8 px-8 py-4 bg-white border border-slate-200 rounded-2xl shadow-sm">
                     <div className="text-center">
-                        <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest mb-1">Activas</p>
-                        <p className="text-2xl font-black text-slate-800 leading-none">{assignments.length}</p>
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Activas</p>
+                        <p className="text-xl font-black text-slate-900 leading-none">{assignments.length}</p>
                     </div>
-                    <div className="w-px h-auto bg-slate-100" />
+                    <div className="w-px h-auto bg-slate-200" />
                     <div className="text-center">
-                        <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest mb-1">Alumnos</p>
-                        <p className="text-2xl font-black text-slate-800 leading-none">{students.length}</p>
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Alumnos</p>
+                        <p className="text-xl font-black text-slate-900 leading-none">{students.length}</p>
                     </div>
                 </div>
             </div>
@@ -787,7 +674,7 @@ const ClassroomDetail = ({ classroom, onBack }) => {
                 />
                 
                 {activeTab === 'assignments' && (
-                    <PremiumButton onClick={openAssignModal} icon={<Plus size={20}/>} className="!rounded-2xl !py-3.5">
+                    <PremiumButton onClick={openAssignModal} icon={<Plus size={20}/>} className="!rounded-xl !py-3.5">
                         Nueva Actividad
                     </PremiumButton>
                 )}
@@ -822,8 +709,8 @@ const ClassroomDetail = ({ classroom, onBack }) => {
                 {activeTab === 'assignments' && (
                     <div className="space-y-6">
                         {assignments.length === 0 ? (
-                            <div className="bg-white rounded-[3rem] p-24 text-center border-2 border-dashed border-slate-100 flex flex-col items-center">
-                                <HistoryIcon size={48} className="text-slate-200 mb-6" />
+                            <div className="bg-slate-50 rounded-2xl p-16 text-center border border-dashed border-slate-200 flex flex-col items-center">
+                                <HistoryIcon size={40} className="text-slate-300 mb-6" />
                                 <h3 className="text-2xl font-black text-slate-800 mb-2">No hay actividades publicadas</h3>
                                 <p className="text-slate-500 font-medium max-w-sm mb-10">Empieza asignando secuencias o evaluaciones para que tus estudiantes puedan completar sus tareas.</p>
                                 <PremiumButton variant="secondary" onClick={openAssignModal} icon={<Plus size={18}/>}>Publicar la primera</PremiumButton>
@@ -831,14 +718,14 @@ const ClassroomDetail = ({ classroom, onBack }) => {
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 {assignments.map(a => (
-                                    <PremiumCard key={a.id} noPadding className="flex flex-col group hover:ring-2 hover:ring-brand-500/10 transition-all">
-                                        <div className="p-8 border-b border-slate-50">
+                                    <PremiumCard key={a.id} noPadding className="flex flex-col group hover:shadow-md border border-slate-200 transition-all hover:border-brand-200">
+                                        <div className="p-8 border-b border-slate-100 flex-grow">
                                             <div className="flex justify-between items-start mb-4">
                                                 <span className={`text-[9px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-full ${a.item_type === 'assessment' ? 'bg-indigo-50 text-indigo-600' : 'bg-brand-50 text-brand-600'}`}>
                                                     {a.item_type === 'assessment' ? 'Evaluación' : 'Secuencia Didáctica'}
                                                 </span>
                                                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <button onClick={() => setIsDeletingActivity({ id: a.id, title: a.title })} className="p-2 text-slate-300 hover:text-rose-500 transition-colors">
+                                                    <button onClick={() => setIsDeletingActivity({ id: a.id, title: a.title })} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors">
                                                         <Trash2 size={16}/>
                                                     </button>
                                                 </div>
@@ -851,7 +738,7 @@ const ClassroomDetail = ({ classroom, onBack }) => {
                                         </div>
                                         <button 
                                             onClick={() => loadSubmissionsForAssignment(a)}
-                                            className="p-5 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-900 hover:text-white transition-all rounded-b-[inherit]"
+                                            className="p-5 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-all border-t border-slate-200 rounded-b-[inherit]"
                                         >
                                             Ver Entregas
                                             <ExternalLink size={14} />
@@ -897,14 +784,14 @@ const ClassroomDetail = ({ classroom, onBack }) => {
                 {activeTab === 'grades' && (
                     <div className="space-y-6">
                         {matrixLoading ? (
-                            <div className="p-20 bg-white rounded-3xl border border-slate-100 flex flex-col items-center justify-center text-center">
+                            <div className="p-20 bg-white rounded-2xl border border-slate-200 flex flex-col items-center justify-center text-center">
                                 <Loader2 size={40} className="animate-spin text-brand-500 mb-4" />
                                 <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Generando Matriz Académica...</p>
                             </div>
                         ) : assignments.length === 0 ? (
-                            <div className="bg-white border-2 border-dashed border-slate-100 rounded-[3rem] p-24 text-center text-slate-300">
-                                <Award size={56} className="mx-auto mb-6 opacity-20" />
-                                <h3 className="text-xl font-black text-slate-400 uppercase tracking-widest">Libreta de Notas Vacía</h3>
+                            <div className="bg-slate-50 border border-dashed border-slate-200 rounded-2xl p-16 text-center text-slate-400">
+                                <Award size={48} className="mx-auto mb-6 opacity-30" />
+                                <h3 className="text-xl font-black text-slate-500 uppercase tracking-widest">Libreta de Notas Vacía</h3>
                             </div>
                         ) : (
                             <div className="relative group/table animate-scale-up">
@@ -969,11 +856,11 @@ const ClassroomDetail = ({ classroom, onBack }) => {
                                     })}
                                 </PremiumTable>
                                 
-                                <div className="mt-8 flex flex-wrap items-center gap-8 justify-center bg-white p-6 rounded-[2rem] border border-slate-100 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">
-                                    <div className="flex items-center gap-3"><div className="w-4 h-4 rounded-lg bg-emerald-100 shadow-inner"></div> Calificado</div>
-                                    <div className="flex items-center gap-3"><div className="w-4 h-4 rounded-lg bg-purple-100 border-2 border-purple-200"></div> Sugerencia IA</div>
-                                    <div className="flex items-center gap-3"><div className="w-4 h-4 rounded-lg bg-amber-50 border border-amber-200"></div> En Espera</div>
-                                    <div className="flex items-center gap-3"><div className="w-4 h-4 rounded-lg bg-slate-100"></div> Sin Registro</div>
+                                <div className="mt-8 flex flex-wrap items-center gap-8 justify-center bg-white p-6 rounded-2xl border border-slate-200 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 shadow-sm">
+                                    <div className="flex items-center gap-3"><div className="w-4 h-4 rounded-md bg-emerald-100 border border-emerald-200"></div> Calificado</div>
+                                    <div className="flex items-center gap-3"><div className="w-4 h-4 rounded-md bg-purple-100 border border-purple-200"></div> Sugerencia IA</div>
+                                    <div className="flex items-center gap-3"><div className="w-4 h-4 rounded-md bg-amber-50 border border-amber-200"></div> En Espera</div>
+                                    <div className="flex items-center gap-3"><div className="w-4 h-4 rounded-md bg-slate-100 border border-slate-200"></div> Sin Registro</div>
                                 </div>
                             </div>
                         )}
@@ -1021,7 +908,7 @@ const ClassroomDetail = ({ classroom, onBack }) => {
                             <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
                             <input 
                                 type="text" placeholder="Filtrar por tema..."
-                                className="w-full pl-12 pr-6 py-3.5 bg-slate-100/50 border-none rounded-2xl text-sm font-bold text-slate-800 placeholder:text-slate-400 focus:ring-4 focus:ring-brand-500/10"
+                                className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 shadow-sm transition-all"
                                 value={assignSearch} onChange={(e) => setAssignSearch(e.target.value)}
                             />
                         </div>
@@ -1038,21 +925,21 @@ const ClassroomDetail = ({ classroom, onBack }) => {
                             .filter(x => !assignSearch || x.topic.toLowerCase().includes(assignSearch.toLowerCase()))
                             .map(item => (
                                 <button key={item.id} onClick={() => setSelectedItem(item)}
-                                    className={`flex items-center gap-5 p-5 rounded-3xl border-2 text-left transition-all ${
+                                    className={`flex items-center gap-4 p-4 rounded-xl border text-left transition-all ${
                                         selectedItem?.id === item.id 
-                                        ? 'bg-brand-50 border-brand-500 shadow-xl shadow-brand-500/5 ring-4 ring-brand-500/5' 
-                                        : 'bg-white border-slate-100 hover:border-brand-200'
+                                        ? 'bg-brand-50 border-brand-300 shadow-sm' 
+                                        : 'bg-white border-slate-200 hover:border-brand-200 hover:shadow-sm'
                                     }`}>
-                                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 ${
-                                        selectedItem?.id === item.id ? 'bg-brand-600 text-white' : 'bg-slate-50 text-slate-400'
+                                    <div className={`w-12 h-12 rounded-lg flex items-center justify-center shrink-0 border border-transparent ${
+                                        selectedItem?.id === item.id ? 'bg-brand-600 text-white' : 'bg-slate-50 text-slate-400 border-slate-200'
                                     }`}>
-                                        {assignTab === 'secuencias' ? <BookOpen size={24}/> : <ClipboardCheck size={24}/>}
+                                        {assignTab === 'secuencias' ? <BookOpen size={20}/> : <ClipboardCheck size={20}/>}
                                     </div>
                                     <div className="min-w-0 flex-grow">
-                                        <div className="text-[9px] font-black text-slate-300 uppercase tracking-widest mb-1">{item.subject} &bull; {item.year}</div>
+                                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">{item.subject} &bull; {item.year}</div>
                                         <h5 className="font-black text-slate-900 group-hover:text-brand-600 transition-colors truncate text-sm uppercase tracking-tight">{item.topic}</h5>
-                                        <div className="flex items-center gap-2 mt-2">
-                                            <span className="text-[8px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded-md uppercase">ID: {item.id.slice(0,5)}</span>
+                                        <div className="flex items-center gap-2 mt-1.5">
+                                            <span className="text-[9px] font-bold text-slate-500 bg-white border border-slate-100 px-2 py-0.5 rounded-md uppercase">ID: {item.id.slice(0,5)}</span>
                                             {selectedItem?.id === item.id && <CheckCircle2 size={16} className="text-brand-600 ml-auto" />}
                                         </div>
                                     </div>

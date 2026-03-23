@@ -156,7 +156,7 @@ const SequenceGenerator = ({ session, profile, loadedSequence, clearLoadedSequen
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-10">
             <div className="space-y-4">
                 <div className="flex items-center gap-3">
-                    <div className="p-2 bg-brand-600 text-white rounded-xl shadow-lg shadow-brand-500/20">
+                    <div className="p-2 bg-slate-900 text-white rounded-lg shadow-sm">
                         <Sparkles size={18} />
                     </div>
                     <span className="text-[10px] font-black text-brand-600 uppercase tracking-[0.3em] leading-none">Pedagogía IA</span>
@@ -209,7 +209,7 @@ const SequenceGenerator = ({ session, profile, loadedSequence, clearLoadedSequen
                                     name="structure" 
                                     value={formData.structure} 
                                     onChange={handleInputChange}
-                                    className="w-full h-14 pl-5 pr-10 bg-slate-50 border-2 border-transparent rounded-[1.25rem] text-slate-800 font-bold focus:bg-white focus:border-brand-500 focus:outline-none transition-all appearance-none cursor-pointer"
+                                    className="w-full h-12 pl-4 pr-10 bg-white border border-slate-200 rounded-lg text-slate-800 font-bold focus:bg-white focus:ring-2 focus:ring-slate-900 focus:border-slate-900 focus:outline-none transition-all appearance-none cursor-pointer shadow-sm"
                                 >
                                     {['Tradicional', 'ABP (Proyectos)', 'Flipped Classroom', 'Gamificación', 'Taller Experimental'].map(o => <option key={o} value={o}>{o}</option>)}
                                 </select>
@@ -221,7 +221,7 @@ const SequenceGenerator = ({ session, profile, loadedSequence, clearLoadedSequen
                                     name="templateSource" 
                                     value={formData.templateSource} 
                                     onChange={handleInputChange}
-                                    className="w-full h-14 pl-5 pr-10 bg-slate-50 border-2 border-transparent rounded-[1.25rem] text-slate-800 font-bold focus:bg-white focus:border-brand-500 focus:outline-none transition-all appearance-none cursor-pointer text-sm"
+                                    className="w-full h-12 pl-4 pr-10 bg-white border border-slate-200 rounded-lg text-slate-800 font-bold focus:bg-white focus:ring-2 focus:ring-slate-900 focus:border-slate-900 focus:outline-none transition-all appearance-none cursor-pointer text-sm shadow-sm"
                                 >
                                     <option value="None">Sin plantilla específica</option>
                                     <optgroup label="Plantillas del Sistema">
@@ -239,7 +239,7 @@ const SequenceGenerator = ({ session, profile, loadedSequence, clearLoadedSequen
                                 </select>
                             </div>
 
-                            <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-transparent hover:border-brand-100 transition-all">
+                            <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-slate-200 transition-all">
                                 <span className="text-xs font-bold text-slate-700">Incluir Sugerencias Multimedia</span>
                                 <label className="relative inline-flex items-center cursor-pointer">
                                     <input type="checkbox" name="includeMedia" checked={formData.includeMedia} onChange={handleInputChange} className="sr-only peer" />
@@ -254,7 +254,7 @@ const SequenceGenerator = ({ session, profile, loadedSequence, clearLoadedSequen
                                     value={formData.suggestions}
                                     onChange={handleInputChange}
                                     rows={3}
-                                    className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-[1.25rem] text-slate-800 font-medium focus:bg-white focus:border-brand-500 focus:outline-none transition-all resize-none text-sm"
+                                    className="w-full p-4 bg-white border border-slate-200 rounded-lg text-slate-800 font-medium focus:bg-white focus:ring-2 focus:ring-slate-900 focus:border-slate-900 focus:outline-none transition-all resize-none text-sm shadow-sm"
                                     placeholder="Ej: Incluir debate grupal al inicio..."
                                 />
                             </div>
@@ -262,7 +262,7 @@ const SequenceGenerator = ({ session, profile, loadedSequence, clearLoadedSequen
                             <div className="pt-6 border-t border-slate-100">
                                 <PremiumButton 
                                     variant="primary" 
-                                    className="w-full !rounded-[2rem] !py-5 shadow-2xl shadow-brand-500/20 active:scale-95" 
+                                    className="w-full !rounded-xl !py-4 active:scale-95" 
                                     onClick={handleGenerate}
                                     loading={isGenerating}
                                     icon={<Sparkles size={20} />}
@@ -275,10 +275,10 @@ const SequenceGenerator = ({ session, profile, loadedSequence, clearLoadedSequen
 
                     {/* Context Management Card */}
                     <PremiumCard title="Fuentes de Consulta" icon={<Database size={18}/>} noPadding>
-                        <div className="p-8 space-y-6">
-                            <div className="p-4 bg-slate-900 rounded-2xl text-[10px] text-white/60 font-medium leading-relaxed">
-                                <p className="mb-2 font-black text-brand-400 uppercase tracking-widest">Memoria de RAG:</p>
-                                Seleccioná materiales de tu <span className="text-white">Base de Saber</span> para que la IA los use como referencia exclusiva.
+                        <div className="p-6 space-y-6">
+                            <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-[10px] text-slate-600 font-medium leading-relaxed">
+                                <p className="mb-1 font-black text-slate-900 uppercase tracking-widest">Memoria de RAG:</p>
+                                Seleccioná materiales de tu <span className="font-bold">Base de Saber</span> para referencia exclusiva.
                             </div>
                             
                             <div className="space-y-3">
@@ -292,9 +292,9 @@ const SequenceGenerator = ({ session, profile, loadedSequence, clearLoadedSequen
                                         {selectedDocs.map(name => {
                                             const doc = existingDocs.find(d => d.name === name);
                                             return (
-                                                <div key={name} className="flex items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-2xl group transition-all hover:border-brand-200">
+                                                <div key={name} className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-lg group transition-all hover:border-slate-300">
                                                     <div className="flex items-center gap-3 overflow-hidden">
-                                                        <FileText size={16} className="text-brand-500 flex-shrink-0" />
+                                                        <FileText size={16} className="text-slate-400 flex-shrink-0" />
                                                         <p className="text-xs font-black text-slate-700 truncate">{doc?.name || 'Documento'}</p>
                                                     </div>
                                                     <button onClick={() => setSelectedDocs(prev => prev.filter(x => x !== name))} className="text-slate-300 hover:text-rose-500 p-1">
@@ -320,19 +320,17 @@ const SequenceGenerator = ({ session, profile, loadedSequence, clearLoadedSequen
                 {/* Right Column: Result / Editor */}
                 <div className={`${collapseConfig ? 'xl:col-span-12' : 'xl:col-span-8'} flex flex-col h-full transition-all duration-500`}>
                     {isGenerating ? (
-                        <div className="flex-grow min-h-[600px] flex flex-col items-center justify-center text-center p-12 bg-white border-2 border-brand-50 rounded-[3.5rem] relative overflow-hidden">
-                            <div className="w-24 h-24 bg-brand-50 text-brand-600 rounded-[2.5rem] flex items-center justify-center mb-8 relative z-10 animate-pulse">
-                                <Sparkles size={48} />
+                        <div className="flex-grow min-h-[600px] flex flex-col items-center justify-center text-center p-12 bg-white border border-slate-200 rounded-2xl relative overflow-hidden shadow-sm">
+                            <div className="w-20 h-20 bg-slate-50 text-slate-900 rounded-xl flex items-center justify-center mb-8 relative z-10 animate-pulse border border-slate-100">
+                                <Sparkles size={36} />
                             </div>
                             <div className="space-y-4 relative z-10 max-w-sm">
-                                <h3 className="text-3xl font-black text-slate-900 tracking-tight leading-none">Consultando tu Cerebro...</h3>
-                                <p className="text-slate-400 font-medium">La IA está procesando tus fuentes y estructurando la secuencia pedagógica perfecta.</p>
+                                <h3 className="text-2xl font-black text-slate-900 tracking-tight leading-none">Consultando tu Cerebro...</h3>
+                                <p className="text-slate-500 font-medium">La IA está procesando tus fuentes y estructurando la secuencia pedagógica perfecta.</p>
                                 <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden mt-6">
-                                    <div className="h-full bg-brand-500 transition-all duration-300" style={{ width: `${generationPulse}%` }} />
+                                    <div className="h-full bg-slate-900 transition-all duration-300" style={{ width: `${generationPulse}%` }} />
                                 </div>
                             </div>
-                            {/* Background decoration */}
-                            <div className="absolute inset-0 border-[20px] border-brand-50/20 rounded-[3rem] animate-ping opacity-20 pointer-events-none"></div>
                         </div>
                     ) : result ? (
                         <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-700">
@@ -356,7 +354,7 @@ const SequenceGenerator = ({ session, profile, loadedSequence, clearLoadedSequen
                                 </div>
                             </div>
 
-                            <div className="p-10 sm:p-14 bg-white border border-slate-100 rounded-[3.5rem] shadow-2xl shadow-slate-200/50 min-h-[700px]">
+                            <div className="p-8 sm:p-12 bg-white border border-slate-200 rounded-2xl shadow-sm min-h-[700px]">
                                 {isEditing ? (
                                     <RichEditor value={editContent} onChange={setEditContent} />
                                 ) : (
@@ -372,9 +370,9 @@ const SequenceGenerator = ({ session, profile, loadedSequence, clearLoadedSequen
                             </div>
                         </div>
                     ) : (
-                        <div className="flex-grow min-h-[600px] flex flex-col items-center justify-center text-center p-12 bg-slate-50 border-4 border-dashed border-slate-200 rounded-[3.5rem] opacity-40 hover:opacity-100 transition-all group">
-                            <div className="w-24 h-24 bg-white text-slate-200 rounded-[2.5rem] border-2 border-slate-100 flex items-center justify-center mb-8 group-hover:text-brand-500 group-hover:scale-110 shadow-sm transition-all duration-700">
-                                <Play size={40} className="ml-2 fill-current"/>
+                        <div className="flex-grow min-h-[600px] flex flex-col items-center justify-center text-center p-12 bg-slate-50 border border-slate-200 border-dashed rounded-2xl opacity-60 hover:opacity-100 transition-all group">
+                            <div className="w-20 h-20 bg-white text-slate-300 rounded-xl border border-slate-200 flex items-center justify-center mb-6 group-hover:text-slate-900 shadow-sm transition-colors duration-300">
+                                <Play size={32} className="ml-1 fill-current"/>
                             </div>
                             <h3 className="text-2xl font-black text-slate-900 tracking-tight leading-none group-hover:text-brand-600 transition-colors">Esperando configuración</h3>
                             <p className="text-slate-400 font-bold text-xs uppercase tracking-widest leading-relaxed max-w-[280px] mt-4">
@@ -399,10 +397,10 @@ const SequenceGenerator = ({ session, profile, loadedSequence, clearLoadedSequen
                                 <button 
                                     key={doc.name}
                                     onClick={() => setSelectedDocs(prev => prev.includes(doc.name) ? prev.filter(x => x !== doc.name) : [...prev, doc.name])}
-                                    className={`flex items-center gap-4 p-5 rounded-3xl border-2 transition-all text-left ${selectedDocs.includes(doc.name) ? 'border-brand-500 bg-brand-50 shadow-lg shadow-brand-500/5' : 'border-slate-50 hover:border-brand-200'}`}
+                                    className={`flex items-center gap-4 p-4 rounded-xl border transition-all text-left ${selectedDocs.includes(doc.name) ? 'border-slate-900 bg-slate-50' : 'border-slate-200 hover:border-slate-400 bg-white'}`}
                                 >
-                                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${selectedDocs.includes(doc.name) ? 'bg-brand-600 text-white shadow-xl shadow-brand-500/20' : 'bg-slate-50 text-slate-300'}`}>
-                                        {selectedDocs.includes(doc.name) ? <Check size={24}/> : <FileText size={24}/>}
+                                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${selectedDocs.includes(doc.name) ? 'bg-slate-900 text-white' : 'bg-slate-50 text-slate-400 border border-slate-200'}`}>
+                                        {selectedDocs.includes(doc.name) ? <Check size={20}/> : <FileText size={20}/>}
                                     </div>
                                     <div>
                                         <p className="text-sm font-black text-slate-900 truncate max-w-[200px]">{doc.name}</p>
@@ -436,12 +434,12 @@ const SequenceGenerator = ({ session, profile, loadedSequence, clearLoadedSequen
                                         setIsEditing(false);
                                         setShowHistory(false);
                                     }}
-                                    className="p-6 rounded-[2rem] bg-slate-50 border border-slate-100 hover:border-brand-500 cursor-pointer group transition-all relative overflow-hidden"
+                                    className="p-5 rounded-xl bg-white border border-slate-200 hover:border-slate-900 cursor-pointer group transition-all relative overflow-hidden shadow-sm"
                                 >
                                     <div className="flex items-center gap-3 mb-2">
-                                        <span className="px-3 py-1 bg-white border border-slate-200 rounded-lg text-[9px] font-black text-slate-400 tracking-widest">{item.date}</span>
+                                        <span className="px-2 py-0.5 bg-slate-50 border border-slate-200 rounded-md text-[9px] font-black text-slate-500 tracking-widest">{item.date}</span>
                                     </div>
-                                    <h4 className="text-lg font-black text-slate-900 group-hover:text-brand-600 transition-colors">{item.params.topic}</h4>
+                                    <h4 className="text-base font-black text-slate-900 transition-colors">{item.params.topic}</h4>
                                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">{item.params.subject} &bull; {item.params.year}</p>
                                     <div className="absolute top-1/2 right-6 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0">
                                         <button onClick={(e) => { e.stopPropagation(); setHistory(h => h.filter(prev => prev.id !== item.id)); }} className="p-3 bg-rose-50 text-rose-500 rounded-2xl hover:bg-rose-500 hover:text-white transition-all">
@@ -460,22 +458,22 @@ const SequenceGenerator = ({ session, profile, loadedSequence, clearLoadedSequen
                 <PremiumModal isOpen={showSaveModal} onClose={() => setShowSaveModal(false)} title="Guardar Recursos">
                     <div className="space-y-8 py-4">
                         <div className="grid grid-cols-1 gap-4">
-                             <button onClick={() => confirmCloudSave(false)} className="flex items-center gap-5 p-6 rounded-[2.5rem] border-2 border-slate-100 hover:border-brand-500 hover:bg-brand-50 transition-all text-left group">
-                                <div className="w-14 h-14 bg-slate-100 text-slate-400 rounded-2xl flex items-center justify-center group-hover:bg-brand-600 group-hover:text-white shadow-xl shadow-brand-500/0 group-hover:shadow-brand-500/20 transition-all">
-                                    <LockIcon size={24} />
+                             <button onClick={() => confirmCloudSave(false)} className="flex items-center gap-4 p-5 rounded-xl border border-slate-200 hover:border-slate-900 bg-white transition-all text-left group shadow-sm">
+                                <div className="w-12 h-12 bg-slate-50 text-slate-500 border border-slate-200 rounded-lg flex items-center justify-center group-hover:bg-slate-900 group-hover:text-white group-hover:border-transparent transition-all">
+                                    <LockIcon size={20} />
                                 </div>
                                 <div className="space-y-1">
-                                    <p className="text-lg font-black text-slate-900 leading-none">Mi Recursos</p>
-                                    <p className="text-xs font-medium text-slate-400">Sólo vos podés ver esto.</p>
+                                    <p className="text-base font-black text-slate-900 leading-none">Mi Recursos</p>
+                                    <p className="text-xs font-medium text-slate-500">Sólo vos podés ver esto.</p>
                                 </div>
                              </button>
-                             <button onClick={() => confirmCloudSave(true)} className="flex items-center gap-5 p-6 rounded-[2.5rem] border-2 border-brand-100 bg-brand-50 hover:bg-white hover:border-brand-500 transition-all text-left group">
-                                <div className="w-14 h-14 bg-brand-600 text-white rounded-2xl flex items-center justify-center shadow-xl shadow-brand-500/20 group-hover:rotate-12 transition-all">
-                                    <Globe size={24} />
+                             <button onClick={() => confirmCloudSave(true)} className="flex items-center gap-4 p-5 rounded-xl border border-slate-200 hover:border-slate-900 bg-white transition-all text-left group shadow-sm">
+                                <div className="w-12 h-12 bg-slate-50 text-slate-500 border border-slate-200 rounded-lg flex items-center justify-center group-hover:bg-slate-900 group-hover:text-white group-hover:border-transparent transition-all">
+                                    <Globe size={20} />
                                 </div>
                                 <div className="space-y-1">
-                                    <p className="text-lg font-black text-brand-700 leading-none">Comunidad</p>
-                                    <p className="text-xs font-medium text-brand-500">Compartir con otros docentes.</p>
+                                    <p className="text-base font-black text-slate-900 leading-none">Comunidad</p>
+                                    <p className="text-xs font-medium text-slate-500">Compartir con otros docentes.</p>
                                 </div>
                              </button>
                         </div>

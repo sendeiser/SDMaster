@@ -69,9 +69,9 @@ const ExploreSequences = ({ onLoadSequence, onLoadAssessment }) => {
             )}
 
             {/* Hero / Header Section */}
-            <div className="relative bg-slate-900 rounded-[3.5rem] p-10 md:p-16 overflow-hidden shadow-2xl">
+            <div className="relative bg-slate-900 rounded-2xl p-10 md:p-16 overflow-hidden shadow-lg border border-slate-800">
                 {/* Background Decor */}
-                <div className="absolute top-0 right-0 p-10 opacity-10 blur-3xl">
+                <div className="absolute top-0 right-0 p-10 opacity-5 blur-3xl">
                     <GlobeIcon size={400} className="text-brand-400 rotate-12"/>
                 </div>
                 <div className="absolute bottom-0 left-0 p-10 opacity-5 blur-2xl">
@@ -80,7 +80,7 @@ const ExploreSequences = ({ onLoadSequence, onLoadAssessment }) => {
 
                 <div className="relative z-10 space-y-8 max-w-3xl">
                     <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 bg-brand-500 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-brand-500/20">
+                        <div className="w-12 h-12 bg-brand-500 rounded-xl flex items-center justify-center text-white shadow-sm">
                             <GlobeIcon size={24} />
                         </div>
                         <span className="text-[11px] font-black text-brand-400 uppercase tracking-[0.3em]">Comunidad Global</span>
@@ -101,10 +101,10 @@ const ExploreSequences = ({ onLoadSequence, onLoadAssessment }) => {
                             icon={<SearchIcon size={22}/>}
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="!w-full sm:!min-w-[400px] !h-16 !bg-white/10 !border-white/10 !text-white placeholder:text-slate-500 !rounded-3xl focus:!bg-white/20"
+                            className="!w-full sm:!min-w-[400px] !h-14 !bg-white/10 !border-white/10 !text-white placeholder:text-slate-500 !rounded-xl focus:!bg-white/20"
                         />
-                        <div className="flex bg-white/10 p-1 rounded-2xl border border-white/5 backdrop-blur-md">
-                            <button className="px-6 h-full flex items-center gap-2 text-white font-black text-xs uppercase tracking-widest hover:bg-white/10 rounded-xl transition-all">
+                        <div className="flex bg-white/10 p-1 rounded-xl border border-white/5 backdrop-blur-md">
+                            <button className="px-6 h-full flex items-center gap-2 text-white font-black text-xs uppercase tracking-widest hover:bg-white/10 rounded-lg transition-all">
                                 <FilterIcon size={16}/> Filtrar
                             </button>
                         </div>
@@ -148,7 +148,7 @@ const ExploreSequences = ({ onLoadSequence, onLoadAssessment }) => {
                         <PremiumCard 
                             key={item.id} 
                             noPadding 
-                            className="group flex flex-col h-full hover:-translate-y-2 hover:shadow-2xl hover:shadow-brand-500/10 transition-all duration-500 border-transparent hover:border-slate-100"
+                            className="group flex flex-col h-full hover:-translate-y-1 hover:shadow-lg transition-all duration-300 border border-slate-200 hover:border-slate-300"
                         >
                             {/* Card Decoration Top */}
                             <div className={`h-3 p-1 w-full ${activeTab === 'secuencias' ? 'bg-brand-500' : 'bg-purple-500'}`}></div>
@@ -157,32 +157,30 @@ const ExploreSequences = ({ onLoadSequence, onLoadAssessment }) => {
                                 {/* Header Info */}
                                 <div className="flex items-start justify-between mb-8">
                                     <div className="flex flex-wrap gap-2">
-                                        <span className={`text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border-2 ${
+                                        <span className={`text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border ${
                                             activeTab === 'secuencias' 
                                             ? 'bg-brand-50 border-brand-100 text-brand-700' 
                                             : 'bg-purple-50 border-purple-100 text-purple-700'
                                         }`}>
                                             {item.subject || 'S/M'}
                                         </span>
-                                        <span className="text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg bg-slate-900 text-white shadow-lg shadow-black/10">
+                                        <span className="text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg bg-slate-900 text-white shadow-sm border border-slate-800">
                                             {item.year || 'Nivel Libre'}
                                         </span>
                                     </div>
-                                    <button className="w-10 h-10 rounded-2xl bg-slate-50 text-slate-300 flex items-center justify-center hover:bg-rose-50 hover:text-rose-500 transition-all">
+                                    <button className="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 border border-slate-100 flex items-center justify-center hover:bg-rose-50 hover:text-rose-500 hover:border-rose-100 transition-all">
                                         <HeartIcon size={18}/>
                                     </button>
                                 </div>
 
                                 {/* Author Profile */}
                                 <div className="flex items-center gap-3 mb-8">
-                                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 border-2 border-white shadow-sm overflow-hidden p-[1px]">
-                                        <div className="w-full h-full rounded-[0.8rem] bg-white flex items-center justify-center text-slate-300">
-                                            {item.profiles?.avatar_url ? (
-                                                <img src={item.profiles.avatar_url} alt={item.profiles.full_name} className="w-full h-full object-cover" />
-                                            ) : (
-                                                <UserIcon size={22} />
-                                            )}
-                                        </div>
+                                    <div className="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center text-slate-400 shrink-0">
+                                        {item.profiles?.avatar_url ? (
+                                            <img src={item.profiles.avatar_url} alt={item.profiles.full_name} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <UserIcon size={20} />
+                                        )}
                                     </div>
                                     <div className="min-w-0">
                                         <p className="text-xs font-black text-slate-900 truncate tracking-tight">{item.profiles?.full_name || 'Docente Anónimo'}</p>
@@ -209,16 +207,16 @@ const ExploreSequences = ({ onLoadSequence, onLoadAssessment }) => {
                                     </div>
                                 </div>
 
-                                <div className="flex gap-4">
+                                <div className="flex gap-3">
                                     <PremiumButton 
                                         onClick={() => activeTab === 'secuencias' ? onLoadSequence(item) : onLoadAssessment(item)}
-                                        className="flex-1 !py-4 shadow-xl shadow-brand-500/20 !rounded-[1.25rem]"
-                                        icon={<ArrowRightIcon size={18}/>}
+                                        className="flex-1 !py-3 shadow-sm hover:shadow-md !rounded-xl"
+                                        icon={<ArrowRightIcon size={16}/>}
                                         iconPosition="right"
                                     >
                                         Importar Recurso
                                     </PremiumButton>
-                                    <button className="w-14 h-14 rounded-[1.25rem] bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-slate-100 transition-all border border-slate-100">
+                                    <button className="w-12 h-12 rounded-xl bg-white text-slate-400 flex items-center justify-center hover:bg-slate-50 hover:text-slate-600 transition-all border border-slate-200">
                                         <Share2Icon size={18}/>
                                     </button>
                                 </div>
@@ -227,11 +225,11 @@ const ExploreSequences = ({ onLoadSequence, onLoadAssessment }) => {
                     ))}
                 </div>
             ) : (
-                <div className="py-32 flex flex-col items-center text-center space-y-10 px-6">
+                <div className="py-24 flex flex-col items-center text-center space-y-8 px-6">
                     <div className="relative">
-                        <div className="w-32 h-32 bg-slate-100 rounded-[3rem] animate-pulse"></div>
+                        <div className="w-24 h-24 bg-slate-50 border border-slate-100 rounded-2xl animate-pulse"></div>
                         <div className="absolute inset-0 flex items-center justify-center text-slate-200">
-                           <GlobeIcon size={64}/>
+                           <GlobeIcon size={48}/>
                         </div>
                     </div>
                     <div className="space-y-4">
@@ -248,17 +246,17 @@ const ExploreSequences = ({ onLoadSequence, onLoadAssessment }) => {
 
             {/* Bottom Call to Action */}
             <div className="px-4 pt-10">
-                <div className="bg-brand-500 rounded-[3.5rem] p-12 text-center text-white relative overflow-hidden shadow-2xl shadow-brand-500/20">
+                <div className="bg-brand-500 rounded-2xl p-10 md:p-12 text-center text-white relative overflow-hidden shadow-lg border border-brand-400">
                     <div className="relative z-10 space-y-6">
-                        <div className="w-20 h-20 bg-white/10 rounded-[2rem] flex items-center justify-center mx-auto mb-6 backdrop-blur-xl border border-white/20">
-                            <GraduationCapIcon size={40} className="text-white" />
+                        <div className="w-16 h-16 bg-white/10 rounded-xl flex items-center justify-center mx-auto mb-6 backdrop-blur-xl border border-white/20">
+                            <GraduationCapIcon size={32} className="text-white" />
                         </div>
                         <h3 className="text-3xl font-black tracking-tight">¿Tenés material increíble para compartir?</h3>
-                        <p className="text-white/70 font-medium max-w-lg mx-auto text-lg">
+                        <p className="text-white/80 font-medium max-w-lg mx-auto text-base">
                             Ayudá a otros docentes subiendo tus secuencias validadas. Juntos construimos el futuro de la educación con IA.
                         </p>
                         <div className="pt-4">
-                            <PremiumButton className="!bg-white !text-brand-600 !py-5 !px-10 !rounded-3xl !text-lg shadow-2xl shadow-black/20" icon={<Share2Icon size={20}/>}>
+                            <PremiumButton className="!bg-white !text-brand-600 !py-4 !px-8 !rounded-xl !text-base font-bold shadow-md hover:shadow-lg transition-all" icon={<Share2Icon size={18}/>}>
                                 Publicar mi Patrimonio
                             </PremiumButton>
                         </div>

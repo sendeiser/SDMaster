@@ -185,7 +185,7 @@ const StudentDashboard = ({ session, profile }) => {
             )}
 
             {/* Header / Hero Section */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 bg-slate-900 p-10 rounded-[3rem] text-white overflow-hidden relative shadow-2xl">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 bg-slate-900 p-10 rounded-2xl text-white overflow-hidden relative shadow-md">
                 <div className="relative z-10 space-y-2">
                     <div className="flex items-center gap-2 mb-2">
                         <div className="p-1.5 bg-brand-500/20 text-brand-400 rounded-lg backdrop-blur-md">
@@ -242,8 +242,8 @@ const StudentDashboard = ({ session, profile }) => {
 
                     <div className="space-y-3">
                         {classrooms.length === 0 ? (
-                            <div className="p-8 text-center bg-white border border-slate-100 rounded-[2.5rem] border-dashed">
-                                <Users size={32} className="mx-auto text-slate-200 mb-3"/>
+                            <div className="p-8 text-center bg-white border border-slate-200 rounded-xl border-dashed">
+                                <Users size={32} className="mx-auto text-slate-300 mb-3"/>
                                 <p className="text-xs font-bold text-slate-400 leading-relaxed uppercase tracking-widest">Aún no estás inscrito en ninguna aula.</p>
                             </div>
                         ) : (
@@ -251,14 +251,14 @@ const StudentDashboard = ({ session, profile }) => {
                                 <button
                                     key={classroom.id}
                                     onClick={() => setActiveClassroomId(classroom.id)}
-                                    className={`w-full group relative flex flex-col items-start p-6 rounded-[2.2rem] transition-all duration-300 ${
+                                    className={`w-full group relative flex flex-col items-start p-5 rounded-2xl transition-all duration-300 ${
                                         activeClassroomId === classroom.id 
-                                        ? 'bg-white shadow-xl shadow-slate-200/50 border border-slate-100 -translate-y-1' 
-                                        : 'bg-transparent hover:bg-white hover:shadow-lg border border-transparent hover:border-slate-50'
+                                        ? 'bg-white shadow-sm border border-slate-200 -translate-y-1' 
+                                        : 'bg-transparent hover:bg-white hover:shadow-sm border border-transparent hover:border-slate-100'
                                     }`}
                                 >
-                                    <div className={`w-10 h-10 rounded-2xl flex items-center justify-center mb-4 transition-all ${
-                                        activeClassroomId === classroom.id ? 'bg-brand-500 text-white shadow-lg shadow-brand-500/20' : 'bg-slate-100 text-slate-400'
+                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-4 transition-all ${
+                                        activeClassroomId === classroom.id ? 'bg-brand-500 text-white shadow-md' : 'bg-slate-100 text-slate-400'
                                     }`}>
                                         <BookOpen size={20}/>
                                     </div>
@@ -280,12 +280,11 @@ const StudentDashboard = ({ session, profile }) => {
                     </div>
                 </div>
 
-                {/* Content Area: Tareas */}
                 <div className="flex-1 min-w-0">
                     {!activeClassroomId ? (
-                        <div className="bg-white border border-slate-100 rounded-[3.5rem] p-16 text-center space-y-6 flex flex-col items-center">
-                            <div className="w-24 h-24 bg-slate-50 rounded-[2.5rem] flex items-center justify-center text-slate-200">
-                                <Layout size={40}/>
+                        <div className="bg-slate-50 border border-slate-200 border-dashed rounded-2xl p-12 text-center space-y-6 flex flex-col items-center">
+                            <div className="w-20 h-20 bg-white rounded-xl flex items-center justify-center text-slate-300 border border-slate-100">
+                                <Layout size={32}/>
                             </div>
                             <div className="space-y-2">
                                 <h3 className="text-2xl font-black text-slate-900">Seleccioná un aula</h3>
@@ -311,9 +310,9 @@ const StudentDashboard = ({ session, profile }) => {
                             </div>
 
                             {assignments.length === 0 ? (
-                                <div className="bg-white border border-slate-100 rounded-[3.5rem] p-16 text-center space-y-6 flex flex-col items-center">
-                                    <div className="w-20 h-20 bg-brand-50 rounded-[2rem] flex items-center justify-center text-brand-300">
-                                        <Calendar size={32}/>
+                                <div className="bg-slate-50 border border-slate-200 border-dashed rounded-2xl p-12 text-center space-y-6 flex flex-col items-center">
+                                    <div className="w-16 h-16 bg-white border border-slate-100 rounded-xl flex items-center justify-center text-slate-300">
+                                        <Calendar size={28}/>
                                     </div>
                                     <div className="space-y-1">
                                         <h3 className="text-xl font-black text-slate-900">Todo al día</h3>
@@ -326,16 +325,16 @@ const StudentDashboard = ({ session, profile }) => {
                                         <PremiumCard 
                                             key={assignment.id} 
                                             noPadding 
-                                            className="group hover:-translate-y-1 transition-all duration-300 border-transparent hover:border-slate-100"
+                                            className="group hover:-translate-y-1 hover:shadow-md transition-all duration-300 border border-slate-200 hover:border-brand-200"
                                         >
                                             <div className="flex flex-col md:flex-row p-6 md:p-8 gap-6 md:items-center">
                                                 {/* Left Status */}
-                                                <div className={`w-14 h-14 shrink-0 rounded-2xl flex items-center justify-center transition-all ${
+                                                <div className={`w-12 h-12 shrink-0 rounded-xl flex items-center justify-center transition-all ${
                                                     assignment.isCompleted 
                                                     ? 'bg-emerald-50 text-emerald-500 border border-emerald-100' 
-                                                    : 'bg-slate-50 text-slate-300 border border-slate-100'
+                                                    : 'bg-slate-50 text-slate-300 border border-slate-200'
                                                 }`}>
-                                                    {assignment.isCompleted ? <CheckCircle2 size={24}/> : <Circle size={24}/>}
+                                                    {assignment.isCompleted ? <CheckCircle2 size={20}/> : <Circle size={20}/>}
                                                 </div>
 
                                                 {/* Core Info */}
@@ -364,7 +363,7 @@ const StudentDashboard = ({ session, profile }) => {
 
                                                 {/* Feedback / Score */}
                                                 {assignment.isCompleted && assignment.submission?.is_graded && (
-                                                    <div className="flex items-center gap-4 bg-emerald-50 border border-emerald-100 p-4 rounded-3xl">
+                                                    <div className="flex items-center gap-4 bg-emerald-50 border border-emerald-100 p-4 rounded-xl shadow-sm">
                                                         <Award size={24} className="text-emerald-500"/>
                                                         <div className="space-y-0.5">
                                                             <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest leading-none">Calificación</p>
@@ -379,7 +378,7 @@ const StudentDashboard = ({ session, profile }) => {
                                                 <PremiumButton 
                                                     onClick={() => setSelectedAssignment(assignment)}
                                                     variant={assignment.isCompleted ? 'secondary' : 'primary'}
-                                                    className={`!rounded-2xl !py-4 !px-8 shadow-xl ${assignment.isCompleted ? '' : 'shadow-brand-500/20'}`}
+                                                    className={`!rounded-xl !py-4 !px-8 shadow-sm ${assignment.isCompleted ? '' : 'hover:shadow-md'}`}
                                                     icon={<Play size={18} fill="currentColor"/>}
                                                 >
                                                     {assignment.isCompleted ? 'Ver Entrega' : 'Comenzar'}

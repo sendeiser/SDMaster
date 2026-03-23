@@ -159,7 +159,7 @@ const AssessmentGenerator = ({ session, profile, loadedAssessment, clearLoadedAs
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-10">
             <div className="space-y-4">
                 <div className="flex items-center gap-3">
-                    <div className="p-2 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-500/20">
+                    <div className="p-2 bg-indigo-600 text-white rounded-lg shadow-sm">
                         <ClipboardCheck size={18} />
                     </div>
                     <span className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.3em] leading-none">Evaluación Crítica</span>
@@ -206,14 +206,14 @@ const AssessmentGenerator = ({ session, profile, loadedAssessment, clearLoadedAs
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Año/Nivel</label>
                                     <select name="year" value={formData.year} onChange={handleInputChange}
-                                        className="w-full h-14 pl-5 bg-slate-50 border-2 border-transparent rounded-[1.25rem] text-slate-800 font-bold focus:bg-white focus:border-indigo-500 focus:outline-none transition-all appearance-none cursor-pointer">
+                                        className="w-full h-12 pl-4 pr-10 bg-white border border-slate-200 rounded-lg text-slate-800 font-bold focus:bg-white focus:ring-2 focus:ring-slate-900 focus:border-slate-900 focus:outline-none transition-all appearance-none cursor-pointer shadow-sm">
                                         {['', '1° Año', '2° Año', '3° Año', '4° Año', '5° Año', '6° Año'].map(o => <option key={o} value={o}>{o || 'Seleccionar'}</option>)}
                                     </select>
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Dificultad</label>
                                     <select name="difficulty" value={formData.difficulty} onChange={handleInputChange}
-                                        className="w-full h-14 pl-5 bg-slate-50 border-2 border-transparent rounded-[1.25rem] text-slate-800 font-bold focus:bg-white focus:border-indigo-500 focus:outline-none transition-all appearance-none cursor-pointer">
+                                        className="w-full h-12 pl-4 pr-10 bg-white border border-slate-200 rounded-lg text-slate-800 font-bold focus:bg-white focus:ring-2 focus:ring-slate-900 focus:border-slate-900 focus:outline-none transition-all appearance-none cursor-pointer shadow-sm">
                                         {['Fácil', 'Intermedio', 'Difícil'].map(o => <option key={o} value={o}>{o}</option>)}
                                     </select>
                                 </div>
@@ -222,7 +222,7 @@ const AssessmentGenerator = ({ session, profile, loadedAssessment, clearLoadedAs
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Formato de Salida</label>
                                 <select name="type" value={formData.type} onChange={handleInputChange}
-                                    className="w-full h-14 pl-5 bg-slate-50 border-2 border-transparent rounded-[1.25rem] text-slate-800 font-bold focus:bg-white focus:border-indigo-500 focus:outline-none transition-all appearance-none cursor-pointer">
+                                    className="w-full h-12 pl-4 pr-10 bg-white border border-slate-200 rounded-lg text-slate-800 font-bold focus:bg-white focus:ring-2 focus:ring-slate-900 focus:border-slate-900 focus:outline-none transition-all appearance-none cursor-pointer shadow-sm">
                                     {['Examen Tradicional', 'Opción Múltiple', 'Rúbrica Detallada', 'Desafío Práctico', 'Cuestionario Rápido'].map(o => <option key={o} value={o}>{o}</option>)}
                                 </select>
                             </div>
@@ -236,7 +236,7 @@ const AssessmentGenerator = ({ session, profile, loadedAssessment, clearLoadedAs
                                     value={formData.suggestions}
                                     onChange={handleInputChange}
                                     rows={3}
-                                    className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-[1.25rem] text-slate-800 font-medium focus:bg-white focus:border-indigo-500 focus:outline-none transition-all resize-none text-sm"
+                                    className="w-full p-4 bg-white border border-slate-200 rounded-lg text-slate-800 font-medium focus:bg-white focus:ring-2 focus:ring-slate-900 focus:border-slate-900 focus:outline-none transition-all resize-none text-sm shadow-sm"
                                     placeholder="Ej: Incluir preguntas sobre el contexto local..."
                                 />
                             </div>
@@ -244,7 +244,7 @@ const AssessmentGenerator = ({ session, profile, loadedAssessment, clearLoadedAs
                             <div className="pt-6 border-t border-slate-100">
                                 <PremiumButton 
                                     variant="primary" 
-                                    className="w-full !rounded-[2rem] !py-5 shadow-2xl shadow-indigo-500/20 active:scale-95 !bg-indigo-600 hover:!bg-indigo-700" 
+                                    className="w-full !rounded-xl !py-4 active:scale-95 !bg-indigo-600 hover:!bg-indigo-700" 
                                     onClick={handleGenerate}
                                     loading={isGenerating}
                                     icon={<Sparkles size={20} />}
@@ -257,10 +257,10 @@ const AssessmentGenerator = ({ session, profile, loadedAssessment, clearLoadedAs
 
                     {/* Context Management Card */}
                     <PremiumCard title="Contexto Institucional" icon={<Database size={18}/>} noPadding>
-                        <div className="p-8 space-y-6">
-                            <div className="p-4 bg-slate-900 rounded-2xl text-[10px] text-white/60 font-medium leading-relaxed">
-                                <p className="mb-2 font-black text-indigo-400 uppercase tracking-widest">Fuentes de Verdad:</p>
-                                Vinculá tus <span className="text-white">Secuencias Previas</span> o documentos de la <span className="text-white">Memoria</span> para alinear el examen a lo enseñado.
+                        <div className="p-6 space-y-6">
+                            <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg text-[10px] text-slate-600 font-medium leading-relaxed">
+                                <p className="mb-1 font-black text-slate-900 uppercase tracking-widest">Fuentes de Verdad:</p>
+                                Vinculá tus <span className="font-bold">Secuencias Previas</span> o documentos de la <span className="font-bold">Memoria</span> para alinear el examen a lo enseñado.
                             </div>
                             
                             <div className="space-y-4">
@@ -289,7 +289,7 @@ const AssessmentGenerator = ({ session, profile, loadedAssessment, clearLoadedAs
                                             {selectedSequences.map(id => {
                                                 const seq = userSequences.find(s => s.id === id);
                                                 return (
-                                                    <div key={id} className="flex items-center justify-between p-3 bg-indigo-50 border border-indigo-100 rounded-xl group transition-all hover:bg-white">
+                                                    <div key={id} className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-lg group transition-all hover:border-slate-300">
                                                         <div className="flex items-center gap-2 overflow-hidden">
                                                             <FilePlus size={14} className="text-indigo-500 flex-shrink-0" />
                                                             <p className="text-[11px] font-bold text-slate-700 truncate">{seq?.topic || 'Secuencia'}</p>
@@ -303,7 +303,7 @@ const AssessmentGenerator = ({ session, profile, loadedAssessment, clearLoadedAs
                                             {selectedDocs.map(name => {
                                                 const doc = existingDocs.find(d => d.name === name);
                                                 return (
-                                                    <div key={name} className="flex items-center justify-between p-3 bg-amber-50 border border-amber-100 rounded-xl group transition-all hover:bg-white">
+                                                    <div key={name} className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-lg group transition-all hover:border-slate-300">
                                                         <div className="flex items-center gap-2 overflow-hidden">
                                                             <FileText size={14} className="text-amber-500 flex-shrink-0" />
                                                             <p className="text-[11px] font-bold text-slate-700 truncate">{doc?.name || 'Documento'}</p>
@@ -325,18 +325,17 @@ const AssessmentGenerator = ({ session, profile, loadedAssessment, clearLoadedAs
                 {/* Right Column: Editor */}
                 <div className={`${collapseConfig ? 'xl:col-span-12' : 'xl:col-span-8'} flex flex-col h-full transition-all duration-500`}>
                     {isGenerating ? (
-                        <div className="flex-grow min-h-[600px] flex flex-col items-center justify-center text-center p-12 bg-white border-2 border-indigo-50 rounded-[3.5rem] relative overflow-hidden">
-                            <div className="w-24 h-24 bg-indigo-50 text-indigo-600 rounded-[2.5rem] flex items-center justify-center mb-8 relative z-10 animate-pulse">
-                                <ClipboardCheck size={48} />
+                        <div className="flex-grow min-h-[600px] flex flex-col items-center justify-center text-center p-12 bg-white border border-slate-200 rounded-2xl relative overflow-hidden shadow-sm">
+                            <div className="w-20 h-20 bg-slate-50 text-slate-900 border border-slate-100 rounded-xl flex items-center justify-center mb-8 relative z-10 animate-pulse">
+                                <ClipboardCheck size={36} />
                             </div>
                             <div className="space-y-4 relative z-10 max-w-sm">
-                                <h3 className="text-3xl font-black text-slate-900 tracking-tight leading-none">Diseñando Evaluación...</h3>
-                                <p className="text-slate-400 font-medium">Sincronizando con tus secuencias y documentos para garantizar alineación académica.</p>
+                                <h3 className="text-2xl font-black text-slate-900 tracking-tight leading-none">Diseñando Evaluación...</h3>
+                                <p className="text-slate-500 font-medium">Sincronizando con tus secuencias y documentos para garantizar alineación académica.</p>
                                 <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden mt-6">
-                                    <div className="h-full bg-indigo-500 transition-all duration-300" style={{ width: `${generationPulse}%` }} />
+                                    <div className="h-full bg-slate-900 transition-all duration-300" style={{ width: `${generationPulse}%` }} />
                                 </div>
                             </div>
-                            <div className="absolute inset-0 border-[20px] border-indigo-50/20 rounded-[3rem] animate-ping opacity-20 pointer-events-none"></div>
                         </div>
                     ) : result ? (
                         <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-700">
@@ -360,7 +359,7 @@ const AssessmentGenerator = ({ session, profile, loadedAssessment, clearLoadedAs
                                 </div>
                             </div>
 
-                            <div className="p-10 sm:p-14 bg-white border border-slate-100 rounded-[3.5rem] shadow-2xl shadow-slate-200/50 min-h-[700px]">
+                            <div className="p-8 sm:p-12 bg-white border border-slate-200 rounded-2xl shadow-sm min-h-[700px]">
                                 {isEditing ? (
                                     <RichEditor value={editContent} onChange={setEditContent} />
                                 ) : (
@@ -376,9 +375,9 @@ const AssessmentGenerator = ({ session, profile, loadedAssessment, clearLoadedAs
                             </div>
                         </div>
                     ) : (
-                        <div className="flex-grow min-h-[600px] flex flex-col items-center justify-center text-center p-12 bg-slate-50 border-4 border-dashed border-slate-200 rounded-[3.5rem] opacity-40 hover:opacity-100 transition-all group">
-                            <div className="w-24 h-24 bg-white text-slate-200 rounded-[2.5rem] border-2 border-slate-100 flex items-center justify-center mb-8 group-hover:text-indigo-500 group-hover:scale-110 shadow-sm transition-all duration-700">
-                                <Play size={40} className="ml-2 fill-current"/>
+                        <div className="flex-grow min-h-[600px] flex flex-col items-center justify-center text-center p-12 bg-slate-50 border border-slate-200 border-dashed rounded-2xl opacity-60 hover:opacity-100 transition-all group">
+                            <div className="w-20 h-20 bg-white text-slate-300 rounded-xl border border-slate-200 flex items-center justify-center mb-6 group-hover:text-slate-900 shadow-sm transition-colors duration-300">
+                                <Play size={32} className="ml-1 fill-current"/>
                             </div>
                             <h3 className="text-2xl font-black text-slate-900 tracking-tight leading-none group-hover:text-indigo-600 transition-colors">Esperando configuración</h3>
                             <p className="text-slate-400 font-bold text-xs uppercase tracking-widest leading-relaxed max-w-[280px] mt-4">
@@ -410,8 +409,8 @@ const AssessmentGenerator = ({ session, profile, loadedAssessment, clearLoadedAs
                                             ) : (
                                                 userSequences.map(s => (
                                                     <button key={s.id} onClick={() => setSelectedSequences(p => p.includes(s.id) ? p.filter(x => x !== s.id) : [...p, s.id])}
-                                                        className={`w-full flex items-center gap-4 p-4 rounded-3xl border-2 transition-all text-left ${selectedSequences.includes(s.id) ? 'border-indigo-500 bg-indigo-50 shadow-lg shadow-indigo-500/5' : 'border-slate-50'}`}>
-                                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${selectedSequences.includes(s.id) ? 'bg-indigo-600 text-white' : 'bg-slate-50 text-slate-300'}`}>
+                                                        className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-all text-left ${selectedSequences.includes(s.id) ? 'border-slate-900 bg-slate-50' : 'border-slate-200 hover:border-slate-400 bg-white'}`}>
+                                                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${selectedSequences.includes(s.id) ? 'bg-slate-900 text-white' : 'bg-slate-50 text-slate-400 border border-slate-200'}`}>
                                                             {selectedSequences.includes(s.id) ? <Check size={20}/> : <FilePlus size={20}/>}
                                                         </div>
                                                         <div>
@@ -429,8 +428,8 @@ const AssessmentGenerator = ({ session, profile, loadedAssessment, clearLoadedAs
                                             ) : (
                                                 existingDocs.filter(d => d.category?.toLowerCase() !== 'plantilla').map(doc => (
                                                     <button key={doc.name} onClick={() => setSelectedDocs(p => p.includes(doc.name) ? p.filter(x => x !== doc.name) : [...p, doc.name])}
-                                                        className={`w-full flex items-center gap-4 p-4 rounded-3xl border-2 transition-all text-left ${selectedDocs.includes(doc.name) ? 'border-amber-500 bg-amber-50 shadow-lg shadow-amber-500/5' : 'border-slate-50'}`}>
-                                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${selectedDocs.includes(doc.name) ? 'bg-amber-500 text-white shadow-xl shadow-amber-500/20' : 'bg-slate-50 text-slate-300'}`}>
+                                                        className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-all text-left ${selectedDocs.includes(doc.name) ? 'border-slate-900 bg-slate-50' : 'border-slate-200 hover:border-slate-400 bg-white'}`}>
+                                                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${selectedDocs.includes(doc.name) ? 'bg-slate-900 text-white' : 'bg-slate-50 text-slate-400 border border-slate-200'}`}>
                                                             {selectedDocs.includes(doc.name) ? <Check size={20}/> : <FileText size={20}/>}
                                                         </div>
                                                         <div>
@@ -464,12 +463,12 @@ const AssessmentGenerator = ({ session, profile, loadedAssessment, clearLoadedAs
                                 <div 
                                     key={item.id} 
                                     onClick={() => handleLoadAssessment(item)}
-                                    className="p-6 rounded-[2rem] bg-slate-50 border border-slate-100 hover:border-indigo-500 cursor-pointer group transition-all relative overflow-hidden"
+                                    className="p-5 rounded-xl bg-white border border-slate-200 hover:border-slate-900 cursor-pointer group transition-all relative overflow-hidden shadow-sm"
                                 >
                                     <div className="flex items-center gap-3 mb-2">
-                                        <span className="px-3 py-1 bg-white border border-slate-200 rounded-lg text-[9px] font-black text-slate-400 tracking-widest">{new Date(item.created_at).toLocaleDateString()}</span>
+                                        <span className="px-2 py-0.5 bg-slate-50 border border-slate-200 rounded-md text-[9px] font-black text-slate-500 tracking-widest">{new Date(item.created_at).toLocaleDateString()}</span>
                                     </div>
-                                    <h4 className="text-lg font-black text-slate-900 group-hover:text-indigo-600 transition-colors">{item.topic}</h4>
+                                    <h4 className="text-base font-black text-slate-900 transition-colors">{item.topic}</h4>
                                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">{item.subject} &bull; {item.type}</p>
                                     <div className="absolute top-1/2 right-6 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0">
                                         <button onClick={(e) => { e.stopPropagation(); sequenceDbService.deleteAssessment(item.id).then(() => loadData()); }} className="p-3 bg-rose-50 text-rose-500 rounded-2xl hover:bg-rose-500 hover:text-white transition-all">

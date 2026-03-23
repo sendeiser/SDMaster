@@ -156,7 +156,7 @@ const ClassroomsTeacher = ({ session, profile }) => {
                 <PremiumButton 
                     onClick={() => setIsCreating(true)}
                     icon={<Plus size={20} />}
-                    className="w-full md:w-auto !rounded-2xl !py-4 shadow-xl shadow-brand-500/20"
+                    className="w-full md:w-auto !rounded-xl !py-4 shadow-sm hover:shadow-md"
                 >
                     Nueva Aula
                 </PremiumButton>
@@ -164,9 +164,9 @@ const ClassroomsTeacher = ({ session, profile }) => {
 
             {/* Main Grid */}
             {classrooms.length === 0 ? (
-                <div className="bg-white rounded-[3rem] p-16 text-center border border-slate-100 shadow-xl shadow-slate-200/50 max-w-3xl mx-auto animate-scale-up">
-                    <div className="w-24 h-24 bg-brand-50 text-brand-500 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-inner">
-                        <Users size={40} />
+                <div className="bg-white rounded-2xl p-12 text-center border border-slate-200 shadow-sm max-w-3xl mx-auto animate-scale-up">
+                    <div className="w-20 h-20 bg-slate-50 text-slate-300 rounded-xl flex items-center justify-center mx-auto mb-8 border border-slate-100">
+                        <Users size={32} />
                     </div>
                     <h3 className="text-3xl font-black text-slate-800 mb-4 tracking-tight">Comienza tu viaje académico</h3>
                     <p className="text-slate-500 max-w-md mx-auto mb-10 font-medium leading-relaxed">
@@ -184,11 +184,11 @@ const ClassroomsTeacher = ({ session, profile }) => {
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
                     {classrooms.map((classroom) => (
                         <div key={classroom.id} className="group animate-scale-up">
-                            <PremiumCard noPadding className="h-full flex flex-col hover:border-brand-300 transform transition-all hover:-translate-y-1">
+                            <PremiumCard noPadding className="h-full flex flex-col hover:shadow-md transform transition-all hover:-translate-y-1 border border-slate-200 hover:border-brand-300">
                                 <div className="p-8 border-b border-slate-50 bg-gradient-to-br from-white to-slate-50/50 flex-grow">
                                     <div className="flex justify-between items-start mb-6">
-                                        <div className="w-12 h-12 bg-slate-100 text-slate-400 rounded-2xl flex items-center justify-center group-hover:bg-brand-100 group-hover:text-brand-600 transition-colors">
-                                            <BookOpen size={24} />
+                                        <div className="w-10 h-10 bg-slate-50 border border-slate-100 text-slate-400 rounded-xl flex items-center justify-center group-hover:bg-brand-50 group-hover:text-brand-600 transition-colors">
+                                            <BookOpen size={20} />
                                         </div>
                                         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                             <button 
@@ -218,7 +218,7 @@ const ClassroomsTeacher = ({ session, profile }) => {
                                         </p>
                                     )}
                                     
-                                    <div className="inline-flex items-center gap-3 px-4 py-2 bg-white border border-slate-100 rounded-2xl shadow-sm">
+                                    <div className="inline-flex items-center gap-3 px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg shadow-sm">
                                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Código</span>
                                         <span className="font-mono font-black text-brand-600 tracking-[0.2em] text-lg">{classroom.join_code}</span>
                                     </div>
@@ -243,7 +243,7 @@ const ClassroomsTeacher = ({ session, profile }) => {
                                 
                                 <button 
                                     onClick={() => setActiveClassroom(classroom)}
-                                    className="p-6 flex items-center justify-center gap-3 text-sm font-black uppercase tracking-widest text-slate-500 hover:text-white hover:bg-slate-900 transition-all border-t border-slate-100 rounded-b-[inherit]"
+                                    className="p-6 flex items-center justify-center gap-3 text-sm font-black uppercase tracking-widest bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition-all border-t border-slate-200 rounded-b-[inherit]"
                                 >
                                     Abrir Panel
                                     <ExternalLink size={16} />
@@ -273,7 +273,7 @@ const ClassroomsTeacher = ({ session, profile }) => {
                 )}
             >
                 <div className="space-y-6">
-                    <div className="p-4 bg-brand-50 border border-brand-100 rounded-2xl flex gap-3 items-start">
+                    <div className="p-4 bg-brand-50 border border-brand-100 rounded-xl flex gap-3 items-start">
                         <AlertCircle className="text-brand-500 mt-0.5" size={18} />
                         <p className="text-xs text-brand-800 font-medium leading-relaxed">
                             Al crear un aula obtendrás un código único. Compártelo con tus alumnos para que puedan unirse y ver las actividades.
@@ -295,7 +295,7 @@ const ClassroomsTeacher = ({ session, profile }) => {
                         <textarea
                             value={newClassroom.description}
                             onChange={(e) => setNewClassroom({ ...newClassroom, description: e.target.value })}
-                            className="w-full rounded-xl border border-slate-200 bg-white/70 py-3 px-4 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-4 focus:ring-brand-500/10 focus:border-brand-500 transition-all placeholder:text-slate-300 shadow-sm resize-none"
+                            className="w-full rounded-lg border border-slate-200 bg-white/70 py-3 px-4 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all placeholder:text-slate-300 shadow-sm resize-none"
                             placeholder="Información adicional para tus alumnos..."
                             rows="4"
                         />
@@ -311,8 +311,8 @@ const ClassroomsTeacher = ({ session, profile }) => {
                 maxWidth="max-w-md"
             >
                 <div className="space-y-6 text-center py-4">
-                    <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-[2rem] flex items-center justify-center mx-auto mb-6">
-                        <Trash2 size={32} />
+                    <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                        <Trash2 size={28} />
                     </div>
                     <div>
                         <h3 className="text-xl font-black text-slate-900 mb-2">Acción Irreversible</h3>
