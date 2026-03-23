@@ -174,7 +174,7 @@ const MySequences = ({ session, onLoadSequence, onLoadAssessment }) => {
             )}
 
             {/* Header / Intro */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 px-2 sm:px-0">
                 <div className="space-y-2">
                     <div className="flex items-center gap-2 mb-2">
                         <div className="p-2 bg-brand-100 text-brand-600 rounded-lg">
@@ -182,8 +182,8 @@ const MySequences = ({ session, onLoadSequence, onLoadAssessment }) => {
                         </div>
                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Repositorio Personal</span>
                     </div>
-                    <h1 className="text-4xl font-black text-slate-900 tracking-tight">Mi Patrimonio <span className="text-brand-600">Académico</span></h1>
-                    <p className="text-slate-500 font-medium mt-2 max-w-xl">
+                    <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">Mi Patrimonio <span className="text-brand-600">Académico</span></h1>
+                    <p className="text-slate-500 font-medium mt-2 max-w-xl text-sm sm:text-base">
                         Gestiona, organiza y despliega tu contenido directamente a tus aulas. 
                         Decí qué materiales querés compartir con la comunidad global.
                     </p>
@@ -220,7 +220,7 @@ const MySequences = ({ session, onLoadSequence, onLoadAssessment }) => {
                     <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Sincronizando archivos...</p>
                 </div>
             ) : filteredItems.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 px-2 sm:px-0">
                     {filteredItems.map(item => (
                         <PremiumCard 
                             key={item.id} 
@@ -246,8 +246,8 @@ const MySequences = ({ session, onLoadSequence, onLoadAssessment }) => {
                                 </div>
                             </div>
 
-                            <div className="p-8 flex-1 flex flex-col">
-                                <h3 className="text-xl font-bold text-slate-900 tracking-tight leading-snug mb-3 group-hover:text-brand-600 transition-colors line-clamp-2">
+                            <div className="p-6 sm:p-8 flex-1 flex flex-col">
+                                <h3 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight leading-snug mb-3 group-hover:text-brand-600 transition-colors line-clamp-2">
                                     {item.topic || 'Sin título'}
                                 </h3>
                                 

@@ -437,7 +437,7 @@ function App() {
                         <button onClick={() => setActiveTab('config')} className={`p-2 transition-all ${activeTab === 'config' ? 'text-slate-900 scale-110' : 'text-slate-400'}`}><SettingsIcon size={22}/></button>
                     </div>
 
-                    <div className="p-6 sm:p-10 animate-fade-in pb-32 lg:pb-10">
+                    <div className="p-4 sm:p-8 lg:p-10 animate-fade-in pb-32 lg:pb-10">
                         {activeTab === 'generator' ? (
                             <SequenceGenerator session={session} profile={profile} loadedSequence={loadedSequence} clearLoadedSequence={() => setLoadedSequence(null)} />
                         ) : activeTab === 'kb' ? (

@@ -374,7 +374,7 @@ const ClassroomDetail = ({ classroom, onBack }) => {
         return (
             <div className="fixed inset-0 z-[120] bg-[#f8fafc] flex flex-col font-inter animate-fade-in overflow-hidden">
                 {/* ── Fixed Global Header ── */}
-                <header className="bg-white/90 backdrop-blur-2xl px-6 py-4 border-b border-slate-100 flex items-center justify-between flex-shrink-0 relative z-20 shadow-sm">
+                <header className="bg-white/90 backdrop-blur-2xl px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100 flex items-center justify-between flex-shrink-0 relative z-20 shadow-sm gap-2 sm:gap-4">
                     {/* Left: Back and Assignment Info */}
                     <div className="flex items-center gap-4 min-w-0 flex-1">
                         <button 
@@ -383,41 +383,41 @@ const ClassroomDetail = ({ classroom, onBack }) => {
                         >
                             <ArrowLeft size={20} />
                         </button>
-                        <div className="min-w-0 pr-4">
-                            <span className="text-[10px] uppercase tracking-widest font-black text-slate-400 mb-0.5 block truncate">{selectedAssignment.title}</span>
-                            <div className="flex items-center gap-2">
-                                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                                <span className="text-[11px] font-black text-slate-800">{gradedCount} evaluados</span>
+                        <div className="min-w-0 pr-2 sm:pr-4">
+                            <span className="text-[9px] sm:text-[10px] uppercase tracking-widest font-black text-slate-400 mb-0.5 block truncate">{selectedAssignment.title}</span>
+                            <div className="flex items-center gap-1.5 sm:gap-2">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                <span className="text-[9px] sm:text-[11px] font-black text-slate-800">{gradedCount} <span className="hidden xs:inline">evaluados</span></span>
                                 <span className="text-slate-300">/</span>
-                                <span className="text-[11px] font-bold text-slate-500">{submissions.length} entregas</span>
+                                <span className="text-[9px] sm:text-[11px] font-bold text-slate-500">{submissions.length} <span className="hidden xs:inline">entregas</span></span>
                             </div>
                         </div>
                     </div>
 
                     {/* Center: Student Navigation */}
                     {selectedSubmission ? (
-                        <div className="flex items-center gap-4 flex-1 justify-center">
+                        <div className="flex items-center gap-2 sm:gap-4 flex-1 justify-center">
                             <button 
                                 onClick={handlePrevStudent} 
                                 disabled={currentSubIndex <= 0}
-                                className="w-10 h-10 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-slate-600 hover:bg-slate-50 hover:border-brand-300 hover:text-brand-600 disabled:opacity-30 disabled:hover:bg-white disabled:hover:border-slate-200 disabled:hover:text-slate-600 transition-all shadow-sm active:scale-95"
+                                className="w-8 h-8 sm:w-10 sm:h-10 bg-white border border-slate-200 rounded-lg sm:rounded-xl flex items-center justify-center text-slate-600 hover:bg-slate-50 hover:border-brand-300 hover:text-brand-600 disabled:opacity-30 transition-all shadow-sm active:scale-95 shrink-0"
                             >
-                                <ChevronLeft size={20} />
+                                <ChevronLeft size={18} />
                             </button>
                             
-                            <div className="flex flex-col items-center bg-brand-50/50 px-8 py-2 rounded-xl border border-brand-100 min-w-[200px] shadow-sm">
-                                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-brand-400 mb-0.5 flex items-center gap-1.5"><Users size={10}/> Viendo Entrega</span>
-                                <span className="text-sm font-black text-brand-800 tracking-tight truncate max-w-[200px]">
-                                    {submittedStudents[currentSubIndex]?.profiles?.full_name || 'Estudiante'}
+                            <div className="flex flex-col items-center bg-brand-50/50 px-3 sm:px-8 py-1.5 sm:py-2 rounded-lg sm:rounded-xl border border-brand-100 min-w-0 sm:min-w-[200px] shadow-sm overflow-hidden">
+                                <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-[0.2em] text-brand-400 mb-0.5 flex items-center gap-1.5 truncate"><Users size={10} className="hidden xs:block"/> <span className="hidden xs:inline">Viendo</span> Entrega</span>
+                                <span className="text-xs sm:text-sm font-black text-brand-800 tracking-tight truncate max-w-full">
+                                    {submittedStudents[currentSubIndex]?.profiles?.full_name?.split(' ')[0] || 'Estudiante'}
                                 </span>
                             </div>
 
                             <button 
                                 onClick={handleNextStudent} 
                                 disabled={currentSubIndex >= submittedStudents.length - 1 || currentSubIndex === -1}
-                                className="w-10 h-10 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-slate-600 hover:bg-slate-50 hover:border-brand-300 hover:text-brand-600 disabled:opacity-30 disabled:hover:bg-white disabled:hover:border-slate-200 disabled:hover:text-slate-600 transition-all shadow-sm active:scale-95"
+                                className="w-8 h-8 sm:w-10 sm:h-10 bg-white border border-slate-200 rounded-lg sm:rounded-xl flex items-center justify-center text-slate-600 hover:bg-slate-50 hover:border-brand-300 hover:text-brand-600 disabled:opacity-30 transition-all shadow-sm active:scale-95 shrink-0"
                             >
-                                <ChevronRight size={20} />
+                                <ChevronRight size={18} />
                             </button>
                         </div>
                     ) : (
@@ -429,7 +429,7 @@ const ClassroomDetail = ({ classroom, onBack }) => {
                     )}
 
                     {/* Right: Actions / Status */}
-                    <div className="flex items-center gap-4 flex-1 justify-end">
+                    <div className="hidden sm:flex items-center gap-4 flex-1 justify-end">
                          {selectedSubmission?.is_graded ? (
                              <div className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-600 rounded-xl border border-emerald-100 text-[10px] xl:text-xs font-black uppercase tracking-widest shadow-sm">
                                  <CheckCircle2 size={16}/> Calificado ({selectedSubmission.final_score}/10)
@@ -442,9 +442,9 @@ const ClassroomDetail = ({ classroom, onBack }) => {
                     </div>
                 </header>
 
-                <main className="flex-1 flex overflow-hidden relative z-10 bg-[#f8fafc]">
+                <main className="flex-1 flex flex-col lg:flex-row overflow-hidden relative z-10 bg-[#f8fafc]">
                     {!selectedSubmission ? (
-                        <div className="flex-1 overflow-y-auto p-10 lg:p-14 custom-scrollbar">
+                        <div className="flex-1 overflow-y-auto p-4 sm:p-10 lg:p-14 custom-scrollbar">
                             <div className="max-w-6xl mx-auto">
                                 <h3 className="text-2xl font-black text-slate-800 mb-8 flex items-center gap-3">
                                     <ClipboardCheck size={24} className="text-brand-500" />
@@ -504,7 +504,7 @@ const ClassroomDetail = ({ classroom, onBack }) => {
                     {/* ── Pane 2: Student Work (Center) ── */}
                     <div className="flex-1 bg-white overflow-y-auto custom-scrollbar relative">
                         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(99,102,241,0.03),transparent)] pointer-events-none" />
-                        <div className="p-10 lg:p-14 w-full max-w-5xl mx-auto pb-32 animate-fade-in relative z-10">
+                        <div className="p-6 sm:p-10 lg:p-14 w-full max-w-5xl mx-auto pb-32 animate-fade-in relative z-10">
                             <div className="flex items-center justify-between mb-8">
                                 <div>
                                     <h3 className="text-3xl font-black text-slate-900 tracking-tight leading-none">Producción Académica</h3>
@@ -556,7 +556,7 @@ const ClassroomDetail = ({ classroom, onBack }) => {
                     </div>
 
                     {/* ── Pane 3: Grading Sidebar (Right) ── */}
-                    <aside className="w-[400px] bg-slate-50/80 border-l border-slate-100 flex flex-col overflow-y-auto custom-scrollbar shrink-0 shadow-[-10px_0_30px_rgba(0,0,0,0.02)]">
+                    <aside className="w-full lg:w-[400px] bg-slate-50/80 border-t lg:border-t-0 lg:border-l border-slate-100 flex flex-col overflow-y-auto custom-scrollbar shrink-0 shadow-[-10px_0_30px_rgba(0,0,0,0.02)]">
                             <div className="p-8 xl:p-10 space-y-8 min-h-full">
                                 {selectedSubmission.ai_score_suggested && (
                                     <div className="bg-slate-900 rounded-2xl p-6 text-white relative overflow-hidden group shadow-md border border-slate-800">

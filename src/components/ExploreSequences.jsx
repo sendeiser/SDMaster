@@ -69,7 +69,7 @@ const ExploreSequences = ({ onLoadSequence, onLoadAssessment }) => {
             )}
 
             {/* Hero / Header Section */}
-            <div className="relative bg-slate-900 rounded-2xl p-10 md:p-16 overflow-hidden shadow-lg border border-slate-800">
+            <div className="relative bg-slate-900 rounded-2xl p-6 sm:p-10 md:p-16 overflow-hidden shadow-lg border border-slate-800 mx-2 sm:mx-0">
                 {/* Background Decor */}
                 <div className="absolute top-0 right-0 p-10 opacity-5 blur-3xl">
                     <GlobeIcon size={400} className="text-brand-400 rotate-12"/>
@@ -86,7 +86,7 @@ const ExploreSequences = ({ onLoadSequence, onLoadAssessment }) => {
                         <span className="text-[11px] font-black text-brand-400 uppercase tracking-[0.3em]">Comunidad Global</span>
                     </div>
                     
-                    <h1 className="text-4xl md:text-6xl font-black text-white tracking-tight leading-[1.1]">
+                    <h1 className="text-3xl xs:text-4xl md:text-6xl font-black text-white tracking-tight leading-[1.1]">
                         Explorá el <span className="text-brand-500">Patrimonio Docente</span> de SD Master
                     </h1>
                     
@@ -143,7 +143,7 @@ const ExploreSequences = ({ onLoadSequence, onLoadAssessment }) => {
                     <p className="text-xs font-black text-slate-400 uppercase tracking-widest animate-pulse">Sincronizando con la red...</p>
                 </div>
             ) : filteredItems.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 px-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-10 px-2 sm:px-4">
                     {filteredItems.map(item => (
                         <PremiumCard 
                             key={item.id} 

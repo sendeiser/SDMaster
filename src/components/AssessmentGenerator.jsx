@@ -156,7 +156,7 @@ const AssessmentGenerator = ({ session, profile, loadedAssessment, clearLoadedAs
     };
 
     const Header = (
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-10">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-6 sm:mb-10 px-2 sm:px-0">
             <div className="space-y-4">
                 <div className="flex items-center gap-3">
                     <div className="p-2 bg-indigo-600 text-white rounded-lg shadow-sm">
@@ -164,15 +164,15 @@ const AssessmentGenerator = ({ session, profile, loadedAssessment, clearLoadedAs
                     </div>
                     <span className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.3em] leading-none">Evaluación Crítica</span>
                 </div>
-                <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight leading-none">
+                <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-slate-900 tracking-tight leading-none">
                     Diseño <span className="text-indigo-600">Académico</span>
                 </h1>
-                <p className="text-slate-500 font-medium max-w-xl text-lg leading-relaxed">
+                <p className="text-slate-500 font-medium max-w-xl text-base sm:text-lg leading-relaxed">
                     Creá exámenes, rúbricas y proyectos de evaluación con precisión pedagógica.
                 </p>
             </div>
-            <div className="flex gap-3">
-                <PremiumButton variant="secondary" onClick={() => setShowHistory(true)} className="!rounded-2xl !py-3" icon={<HistoryIcon size={18} />}>
+            <div className="flex gap-3 w-full sm:w-auto">
+                <PremiumButton variant="secondary" onClick={() => setShowHistory(true)} className="flex-1 sm:flex-none !rounded-2xl !py-3" icon={<HistoryIcon size={18} />}>
                     Guardados
                 </PremiumButton>
             </div>
@@ -359,11 +359,11 @@ const AssessmentGenerator = ({ session, profile, loadedAssessment, clearLoadedAs
                                 </div>
                             </div>
 
-                            <div className="p-8 sm:p-12 bg-white border border-slate-200 rounded-2xl shadow-sm min-h-[700px]">
+                            <div className="p-5 sm:p-8 lg:p-12 bg-white border border-slate-200 rounded-2xl shadow-sm min-h-[500px] sm:min-h-[700px]">
                                 {isEditing ? (
                                     <RichEditor value={editContent} onChange={setEditContent} />
                                 ) : (
-                                    <div className="academic-preview prose prose-slate max-w-none">
+                                    <div className="academic-preview prose prose-slate max-w-none prose-sm sm:prose-base">
                                         <ReactMarkdown 
                                             remarkPlugins={[remarkGfm, remarkMath]} 
                                             rehypePlugins={[rehypeKatex, rehypeRaw]}

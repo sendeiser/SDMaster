@@ -140,7 +140,7 @@ const ClassroomsTeacher = ({ session, profile }) => {
             )}
 
             {/* Header Area */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 px-2 sm:px-0">
                 <div>
                     <div className="flex items-center gap-2 mb-2">
                         <div className="p-2 bg-brand-100 text-brand-600 rounded-lg">
@@ -148,8 +148,8 @@ const ClassroomsTeacher = ({ session, profile }) => {
                         </div>
                         <span className="text-[10px] font-black text-brand-600 uppercase tracking-widest leading-none">Gestión Académica</span>
                     </div>
-                    <h1 className="text-4xl font-black text-slate-900 tracking-tight">Mis <span className="text-brand-600">Aulas</span></h1>
-                    <p className="text-slate-500 font-medium mt-2 max-w-xl">
+                    <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">Mis <span className="text-brand-600">Aulas</span></h1>
+                    <p className="text-slate-500 text-sm sm:text-base font-medium mt-2 max-w-xl">
                         Centraliza tus clases, gestiona la participación de tus estudiantes y realiza un seguimiento detallado de cada actividad.
                     </p>
                 </div>
@@ -181,11 +181,11 @@ const ClassroomsTeacher = ({ session, profile }) => {
                     </PremiumButton>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 sm:gap-8 px-2 sm:px-0">
                     {classrooms.map((classroom) => (
                         <div key={classroom.id} className="group animate-scale-up">
                             <PremiumCard noPadding className="h-full flex flex-col hover:shadow-md transform transition-all hover:-translate-y-1 border border-slate-200 hover:border-brand-300">
-                                <div className="p-8 border-b border-slate-50 bg-gradient-to-br from-white to-slate-50/50 flex-grow">
+                                <div className="p-6 sm:p-8 border-b border-slate-50 bg-gradient-to-br from-white to-slate-50/50 flex-grow">
                                     <div className="flex justify-between items-start mb-6">
                                         <div className="w-10 h-10 bg-slate-50 border border-slate-100 text-slate-400 rounded-xl flex items-center justify-center group-hover:bg-brand-50 group-hover:text-brand-600 transition-colors">
                                             <BookOpen size={20} />

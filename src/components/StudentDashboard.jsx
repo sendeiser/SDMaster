@@ -185,7 +185,7 @@ const StudentDashboard = ({ session, profile }) => {
             )}
 
             {/* Header / Hero Section */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 bg-slate-900 p-10 rounded-2xl text-white overflow-hidden relative shadow-md">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 bg-slate-900 p-6 sm:p-10 rounded-2xl text-white overflow-hidden relative shadow-md">
                 <div className="relative z-10 space-y-2">
                     <div className="flex items-center gap-2 mb-2">
                         <div className="p-1.5 bg-brand-500/20 text-brand-400 rounded-lg backdrop-blur-md">
@@ -235,12 +235,12 @@ const StudentDashboard = ({ session, profile }) => {
                 {/* Sidebar: Mis Aulas */}
                 <div className="w-full lg:w-80 shrink-0 space-y-6">
                     <div className="flex items-center justify-between px-2">
-                        <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                            <Users size={14}/> Mis CLASES
+                        <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                            <Users size={12}/> Mis CLASES
                         </h2>
                     </div>
 
-                    <div className="space-y-3">
+                    <div className="flex lg:flex-col gap-3 overflow-x-auto lg:overflow-x-visible pb-4 lg:pb-0 custom-scrollbar-hide lg:custom-scrollbar snap-x">
                         {classrooms.length === 0 ? (
                             <div className="p-8 text-center bg-white border border-slate-200 rounded-xl border-dashed">
                                 <Users size={32} className="mx-auto text-slate-300 mb-3"/>
@@ -251,10 +251,10 @@ const StudentDashboard = ({ session, profile }) => {
                                 <button
                                     key={classroom.id}
                                     onClick={() => setActiveClassroomId(classroom.id)}
-                                    className={`w-full group relative flex flex-col items-start p-5 rounded-2xl transition-all duration-300 ${
+                                    className={`flex-shrink-0 w-[240px] lg:w-full group relative flex flex-col items-start p-5 rounded-2xl transition-all duration-300 snap-start ${
                                         activeClassroomId === classroom.id 
-                                        ? 'bg-white shadow-sm border border-slate-200 -translate-y-1' 
-                                        : 'bg-transparent hover:bg-white hover:shadow-sm border border-transparent hover:border-slate-100'
+                                        ? 'bg-white shadow-sm border border-slate-200 lg:-translate-y-1' 
+                                        : 'bg-white/50 lg:bg-transparent hover:bg-white hover:shadow-sm border border-transparent hover:border-slate-100'
                                     }`}
                                 >
                                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-4 transition-all ${
@@ -327,7 +327,7 @@ const StudentDashboard = ({ session, profile }) => {
                                             noPadding 
                                             className="group hover:-translate-y-1 hover:shadow-md transition-all duration-300 border border-slate-200 hover:border-brand-200"
                                         >
-                                            <div className="flex flex-col md:flex-row p-6 md:p-8 gap-6 md:items-center">
+                                            <div className="flex flex-col md:flex-row p-5 sm:p-8 gap-4 sm:gap-6 md:items-center">
                                                 {/* Left Status */}
                                                 <div className={`w-12 h-12 shrink-0 rounded-xl flex items-center justify-center transition-all ${
                                                     assignment.isCompleted 
