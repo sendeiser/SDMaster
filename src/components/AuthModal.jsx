@@ -7,11 +7,18 @@ import {
 } from 'lucide-react';
 import { PremiumButton } from './shared/PremiumUI';
 
-const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
-    const [isLogin, setIsLogin] = useState(true);
+const AuthModal = ({ isOpen, onClose, onAuthSuccess, initialIsLogin = true }) => {
+    const [isLogin, setIsLogin] = useState(initialIsLogin);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [fullName, setFullName] = useState('');
+
+    // Reset isLogin when opening with a specific prop
+    React.useEffect(() => {
+        if (isOpen) {
+            setIsLogin(initialIsLogin);
+        }
+    }, [isOpen, initialIsLogin]);
     const [role, setRole] = useState('teacher'); // 'teacher' | 'student'
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);

@@ -949,6 +949,31 @@ const ClassroomDetail = ({ classroom, onBack }) => {
                     </div>
                 </div>
             </PremiumModal>
+
+            {/* MODAL: CONFIRMACIÓN DE ELIMINACIÓN */}
+            <PremiumModal
+                isOpen={!!isDeletingActivity}
+                onClose={() => setIsDeletingActivity(null)}
+                title="Eliminar Actividad"
+                maxWidth="max-w-md"
+                footer={(
+                    <div className="flex gap-3 justify-end w-full">
+                        <PremiumButton variant="secondary" onClick={() => setIsDeletingActivity(null)}>Cancelar</PremiumButton>
+                        <PremiumButton variant="danger" onClick={handleDeleteAssignment}>Eliminar para siempre</PremiumButton>
+                    </div>
+                )}
+            >
+                <div className="text-center space-y-4 py-4">
+                    <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-rose-100">
+                        <AlertTriangle size={32} />
+                    </div>
+                    <h4 className="text-xl font-black text-slate-900 leading-tight">¿Estás seguro?</h4>
+                    <p className="text-sm text-slate-500 font-medium leading-relaxed">
+                        Estás a punto de eliminar <span className="text-slate-900 font-black">"{isDeletingActivity?.title}"</span>. 
+                        Esta acción borrará todas las entregas y notas de los alumnos asociadas a esta actividad.
+                    </p>
+                </div>
+            </PremiumModal>
         </div>
     );
 };

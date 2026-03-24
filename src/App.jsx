@@ -10,6 +10,7 @@ import ClassroomsTeacher from './components/ClassroomsTeacher';
 import StudentDashboard from './components/StudentDashboard';
 import CreditsBadge from './components/CreditsBadge';
 import PlansPage from './components/PlansPage';
+import LandingPage from './components/LandingPage';
 import { PremiumButton, PremiumCard, PremiumToast } from './components/shared/PremiumUI';
 import { supabase } from './lib/supabaseClient';
 import { 
@@ -25,6 +26,7 @@ function App() {
     const [session, setSession] = useState(null);
     const [isAuthLoading, setIsAuthLoading] = useState(true);
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+    const [authInitialMode, setAuthInitialMode] = useState(true); // true = login, false = register
     const [loadedSequence, setLoadedSequence] = useState(null);
     const [loadedAssessment, setLoadedAssessment] = useState(null);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -124,83 +126,22 @@ function App() {
         );
     }
 
-    // ── Pre-Login Landing Page ──────────────────────────────────────────────────
     if (!session) {
         return (
-            <div className="fixed inset-0 bg-slate-900 flex flex-col font-inter overflow-hidden">
-                {notification && <PremiumToast {...notification} onDismiss={() => setNotification(null)} />}
-                
-                {/* Header for Landing */}
-                <div className="relative z-50 h-24 flex items-center justify-between px-10">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-brand-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-brand-500/20">
-                            <Sparkles size={22} />
-                        </div>
-                        <span className="text-xl font-black text-white tracking-tighter uppercase">SD Master</span>
-                    </div>
-                    <div className="flex items-center gap-6">
-                        <button onClick={() => setIsAuthModalOpen(true)} className="text-sm font-black text-white/60 hover:text-white transition-colors uppercase tracking-[0.2em]">Acceder</button>
-                        <PremiumButton onClick={() => setIsAuthModalOpen(true)} className="!rounded-xl !py-3 !px-8 shadow-sm">Empezar Gratis</PremiumButton>
-                    </div>
-                </div>
-
-                {/* Main Landing Body */}
-                <div className="relative flex-grow flex flex-col items-center justify-center px-10">
-                    {/* Background Dynamic Shapes */}
-                    <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
-                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80vw] h-[80vw] bg-brand-600/5 blur-[160px] rounded-full" />
-                        <div className="absolute top-[-20%] right-[-10%] w-[50vw] h-[50vw] bg-indigo-600/10 blur-[140px] rounded-full animate-pulse" />
-                        <div className="absolute bottom-[-10%] left-[-10%] w-[40vw] h-[40vw] bg-brand-500/10 blur-[120px] rounded-full" />
-                    </div>
-
-                    <div className="relative z-10 w-full max-w-6xl flex flex-col items-center text-center animate-fade-in">
-                        <div className="inline-flex items-center gap-3 px-5 py-2.5 bg-white/5 border border-white/10 rounded-full text-brand-400 text-xs font-black uppercase tracking-[0.3em] mb-10 backdrop-blur-md">
-                            <Zap size={14} className="animate-pulse" /> Evolución Tecnológica para Docentes
-                        </div>
-
-                        <h1 className="text-5xl md:text-8xl font-black text-white tracking-tighter mb-8 leading-[1]">
-                            Enseñá mejor, <br/> trabajá <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-indigo-400">más inteligente</span>.
-                        </h1>
-
-                        <p className="text-slate-400 text-xl md:text-2xl max-w-3xl mb-14 font-medium leading-relaxed">
-                            La primera suite pedagógica con <span className="text-white font-black underline decoration-brand-500 decoration-4">IA Generativa</span> diseñada para transformar la corrección y planificación docente.
-                        </p>
-
-                        <div className="flex flex-col sm:flex-row gap-6">
-                            <PremiumButton 
-                                onClick={() => setIsAuthModalOpen(true)} 
-                                className="!px-12 !py-6 !text-xl !rounded-2xl shadow-lg active:scale-95 transition-all"
-                                icon={<ArrowRight size={24} />}
-                                iconPosition="right"
-                            >
-                                Registrarme Ahora
-                            </PremiumButton>
-                            <button 
-                                onClick={() => setIsAuthModalOpen(true)} 
-                                className="px-12 py-6 text-white font-black text-xl hover:bg-white/5 rounded-2xl border-2 border-white/10 transition-all flex items-center justify-center gap-4 group"
-                            >
-                                <Play size={24} className="fill-white group-hover:scale-110 transition-transform"/> Ver Demo
-                            </button>
-                        </div>
-
-                        <div className="mt-20 grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-20 text-center">
-                            {[
-                                { val: '+15k', lab: 'Secuencias' },
-                                { val: '98%', lab: 'Precisión IA' },
-                                { val: '+500', lab: 'Colegios' },
-                                { val: '24/7', lab: 'Soporte' }
-                            ].map(s => (
-                                <div key={s.lab}>
-                                    <div className="text-3xl font-black text-white mb-1">{s.val}</div>
-                                    <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{s.lab}</div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-
-                <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} onAuthSuccess={() => setIsAuthModalOpen(false)} />
-            </div>
+            <>
+                <LandingPage 
+                    onAuthOpen={(isLogin) => {
+                        setAuthInitialMode(isLogin);
+                        setIsAuthModalOpen(true);
+                    }} 
+                />
+                <AuthModal 
+                    isOpen={isAuthModalOpen} 
+                    initialIsLogin={authInitialMode}
+                    onClose={() => setIsAuthModalOpen(false)} 
+                    onAuthSuccess={() => setIsAuthModalOpen(false)} 
+                />
+            </>
         );
     }
 

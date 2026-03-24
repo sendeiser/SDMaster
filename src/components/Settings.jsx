@@ -3,7 +3,7 @@ import {
     User as UserIcon, Settings as SettingsIcon, Save, Monitor, Clock, LogOut,
     BookOpen, GraduationCap, Camera, Lock as LockIcon, CheckCircle2, AlertCircle, Loader2, Sparkles,
     ChevronRight, X, Plus, BellRing, Smartphone, ShieldCheck, Mail, Building,
-    KeyRound, Palette, Layout, Cpu
+    KeyRound, Palette, Layout, Cpu, Calendar
 } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import { sequenceDbService } from '../lib/sequenceDbService';
@@ -12,7 +12,7 @@ import {
     PremiumToast, PremiumTabs, TagInput 
 } from './shared/PremiumUI';
 
-const Settings = ({ session }) => {
+const Settings = ({ session, onProfileUpdate }) => {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [activeSection, setActiveSection] = useState('profile'); 
@@ -102,6 +102,7 @@ const Settings = ({ session }) => {
         setSaving(true);
         try {
             await sequenceDbService.updateProfile(profile);
+            if (onProfileUpdate) await onProfileUpdate(session.user);
             showNotif('success', '¡Perfil actualizado!', 'Tus cambios se han guardado con éxito.');
         } catch (error) {
             showNotif('error', 'Error al guardar', error.message);
@@ -121,6 +122,7 @@ const Settings = ({ session }) => {
             const updatedProfile = { ...profile, avatar_url: publicUrl };
             setProfile(updatedProfile);
             await sequenceDbService.updateProfile(updatedProfile);
+            if (onProfileUpdate) await onProfileUpdate(session.user);
             showNotif('success', 'Foto actualizada', 'Tu nueva imagen de perfil ya está lista.');
         } catch (error) {
             showNotif('error', 'Error al subir', error.message);
@@ -168,7 +170,7 @@ const Settings = ({ session }) => {
     }
 
     const sections = [
-        { id: 'profile', label: 'Mi Perfil', icon: <User size={16}/>, color: 'text-blue-500' },
+        { id: 'profile', label: 'Mi Perfil', icon: <UserIcon size={16}/>, color: 'text-blue-500' },
         { id: 'academic', label: 'Académico', icon: <GraduationCap size={16}/>, color: 'text-purple-500', hide: profile.role === 'student' },
         { id: 'security', label: 'Seguridad', icon: <ShieldCheck size={16}/>, color: 'text-emerald-500' },
         { id: 'preferences', label: 'Preferencias', icon: <SettingsIcon size={16}/>, color: 'text-amber-500', hide: profile.role === 'student' }
