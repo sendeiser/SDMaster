@@ -22,6 +22,13 @@ import {
     PremiumToast, PremiumTabs, PremiumModal 
 } from './shared/PremiumUI';
 
+const AI_SUGGESTIONS = [
+    { label: "Más formal", icon: "✨", prompt: "Reescribe el texto para que tenga un tono mucho más formal y académico." },
+    { label: "Resumir", icon: "📝", prompt: "Resume este contenido a la mitad de su longitud, conservando las ideas principales." },
+    { label: "Expandir", icon: "➕", prompt: "Expande la explicación teórica añadiendo más detalles y un ejemplo claro." },
+    { label: "Traducir", icon: "🗣️", prompt: "Traduce esto a inglés americano." }
+];
+
 const AssessmentGenerator = ({ session, profile, loadedAssessment, clearLoadedAssessment }) => {
     const [formData, setFormData] = useState({
         subject: '', year: '', topic: '',
@@ -44,6 +51,7 @@ const AssessmentGenerator = ({ session, profile, loadedAssessment, clearLoadedAs
     
     const [aiEditPrompt, setAiEditPrompt] = useState('');
     const [isAiEditing, setIsAiEditing] = useState(false);
+    const [selectedText, setSelectedText] = useState('');
     
     const [loadedId, setLoadedId] = useState(null);
     const [notification, setNotification] = useState(null);
@@ -170,17 +178,25 @@ const AssessmentGenerator = ({ session, profile, loadedAssessment, clearLoadedAs
         if (!aiEditPrompt.trim() || !result) return;
         setIsAiEditing(true);
         try {
-            const data = await antigravityService.editContent(result, aiEditPrompt);
+            const data = await antigravityService.editContent(result, aiEditPrompt, selectedText);
             if (data.success) {
                 setResult(data.content);
                 setEditContent(data.content);
                 setAiEditPrompt('');
+                setSelectedText('');
                 showNotif('success', '¡Editado con IA!', 'El documento se ha modificado según tus instrucciones.');
             }
         } catch (err) {
             showNotif('error', 'Error al Editar', err.message);
         } finally {
             setIsAiEditing(false);
+        }
+    };
+
+    const handleTextSelection = () => {
+        const text = window.getSelection().toString().trim();
+        if (text) {
+            setSelectedText(text);
         }
     };
 
@@ -410,7 +426,10 @@ const AssessmentGenerator = ({ session, profile, loadedAssessment, clearLoadedAs
                                 {isEditing ? (
                                     <RichEditor value={editContent} onChange={setEditContent} />
                                 ) : (
-                                    <div className="academic-preview prose prose-slate max-w-none prose-sm sm:prose-base">
+                                    <div 
+                                        className="academic-preview prose prose-slate max-w-none prose-sm sm:prose-base cursor-text selection:bg-brand-200 selection:text-brand-900"
+                                        onMouseUp={handleTextSelection}
+                                    >
                                         <ReactMarkdown 
                                             remarkPlugins={[remarkGfm, remarkMath]} 
                                             rehypePlugins={[rehypeKatex, rehypeRaw]}
@@ -422,28 +441,59 @@ const AssessmentGenerator = ({ session, profile, loadedAssessment, clearLoadedAs
 
                                 {/* Floating AI Edit Bar */}
                                 {!isEditing && (
-                                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[95%] sm:w-[90%] max-w-3xl bg-white/90 backdrop-blur-xl border border-brand-200 shadow-2xl shadow-brand-500/10 rounded-2xl p-2 sm:p-3 flex items-center gap-3 z-10">
-                                        <div className="hidden sm:flex p-2.5 bg-brand-50 text-brand-600 rounded-xl">
-                                            <Sparkles size={20} />
+                                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[95%] sm:w-[90%] max-w-3xl flex flex-col gap-2 z-10">
+                                        {/* Suggestions Row */}
+                                        <div className="flex gap-2 overflow-x-auto hide-scrollbar px-1 pb-1">
+                                            {AI_SUGGESTIONS.map((sug, i) => (
+                                                <button 
+                                                    key={i}
+                                                    onClick={() => setAiEditPrompt(sug.prompt)}
+                                                    className="flex items-center gap-1.5 whitespace-nowrap px-3 py-1.5 bg-white/95 backdrop-blur shadow-sm border border-brand-100 text-slate-600 text-xs font-bold uppercase tracking-wider rounded-full hover:bg-brand-50 hover:text-brand-600 hover:border-brand-300 hover:-translate-y-0.5 transition-all"
+                                                >
+                                                    <span className="text-sm">{sug.icon}</span> {sug.label}
+                                                </button>
+                                            ))}
                                         </div>
-                                        <input 
-                                            type="text" 
-                                            value={aiEditPrompt}
-                                            onChange={(e) => setAiEditPrompt(e.target.value)}
-                                            onKeyDown={(e) => e.key === 'Enter' && handleAiEdit()}
-                                            placeholder="Pedile a la IA que modifique algo (ej. 'Reescribí la consigna 3 más simple')"
-                                            className="flex-grow bg-transparent border-none outline-none text-sm font-medium text-slate-700 placeholder:text-slate-400 px-2"
-                                            disabled={isAiEditing}
-                                        />
-                                        <PremiumButton 
-                                            variant="primary" 
-                                            onClick={handleAiEdit} 
-                                            loading={isAiEditing}
-                                            className="!py-2.5 !px-5 !rounded-xl text-sm"
-                                            icon={!isAiEditing && <Sparkles size={16}/>}
-                                        >
-                                            {isAiEditing ? 'Editando...' : 'Aplicar'}
-                                        </PremiumButton>
+
+                                        <div className="bg-white/90 backdrop-blur-xl border border-brand-200 shadow-2xl shadow-brand-500/10 rounded-2xl p-2 sm:p-3 flex flex-col gap-2">
+                                            {selectedText && (
+                                                <div className="flex items-center justify-between px-3 py-1.5 bg-indigo-50/80 border border-indigo-100 rounded-xl mb-1">
+                                                    <div className="flex items-center gap-2 overflow-hidden">
+                                                        <span className="flex h-2 w-2 rounded-full bg-indigo-500 animate-pulse"></span>
+                                                        <span className="text-[10px] font-black text-indigo-700 uppercase tracking-widest truncate">
+                                                            Modificando: "{selectedText.length > 40 ? selectedText.substring(0, 40) + '...' : selectedText}"
+                                                        </span>
+                                                    </div>
+                                                    <button onClick={() => setSelectedText('')} className="text-indigo-400 hover:text-indigo-600 p-1 hover:bg-indigo-100 rounded-md transition-colors">
+                                                        <X size={14} />
+                                                    </button>
+                                                </div>
+                                            )}
+
+                                            <div className="flex items-center gap-3">
+                                                <div className="hidden sm:flex p-2.5 bg-brand-50 text-brand-600 rounded-xl">
+                                                    <Sparkles size={20} />
+                                                </div>
+                                                <input 
+                                                    type="text" 
+                                                    value={aiEditPrompt}
+                                                    onChange={(e) => setAiEditPrompt(e.target.value)}
+                                                    onKeyDown={(e) => e.key === 'Enter' && handleAiEdit()}
+                                                    placeholder="Escribí una instrucción para editar el texto con IA..."
+                                                    className="flex-grow bg-transparent border-none outline-none text-sm font-medium text-slate-700 placeholder:text-slate-400 px-2"
+                                                    disabled={isAiEditing}
+                                                />
+                                                <PremiumButton 
+                                                    variant="primary" 
+                                                    onClick={handleAiEdit} 
+                                                    loading={isAiEditing}
+                                                    className="!py-2.5 !px-5 !rounded-xl text-sm"
+                                                    icon={!isAiEditing && <Sparkles size={16}/>}
+                                                >
+                                                    {isAiEditing ? 'Editando...' : 'Aplicar'}
+                                                </PremiumButton>
+                                            </div>
+                                        </div>
                                     </div>
                                 )}
                             </div>

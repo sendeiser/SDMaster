@@ -402,19 +402,23 @@ ${studentResponse}
         }
     },
 
-    async editContent(currentContent, instruction) {
+    async editContent(currentContent, instruction, selectedText = null) {
         await checkAndDeductCredit();
 
         if (!currentContent || !instruction) {
             throw new Error("Se requiere el contenido actual y una instrucción para editar.");
         }
 
+        const selectionContext = selectedText 
+            ? `\nATENCIÓN: El usuario ha seleccionado un fragmento específico del documento para modificar:\n[FRAGMENTO SELECCIONADO]: "${selectedText}"\n\nAplica la instrucción ÚNICAMENTE a este fragmento y reemplázalo. El resto del documento debe quedar idéntico.\n` 
+            : '';
+
         const prompt = `
 Eres un editor pedagógico experto. Tu tarea es modificar un documento estrictamente basándote en la instrucción del usuario, preservando TODO el resto del contenido de forma idéntica.
 
 INSTRUCCIÓN DEL USUARIO:
 "${instruction}"
-
+${selectionContext}
 DOCUMENTO ACTUAL:
 ${currentContent}
 
