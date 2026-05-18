@@ -137,6 +137,15 @@ const SequenceGenerator = ({ session, profile, loadedSequence, clearLoadedSequen
         }
     };
 
+    const exitEditMode = () => {
+        setResult(editContent);
+        setIsEditing(false);
+    };
+
+    const getActiveContent = () => {
+        return isEditing ? editContent : result;
+    };
+
     const confirmCloudSave = async (isPublic) => {
         setIsSavingCloud(true);
         setShowSaveModal(false);

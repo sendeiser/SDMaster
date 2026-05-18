@@ -137,6 +137,31 @@ const AssessmentGenerator = ({ session, profile, loadedAssessment, clearLoadedAs
         }
     };
 
+    const exitEditMode = () => {
+        setResult(editContent);
+        setIsEditing(false);
+    };
+
+    const getActiveContent = () => {
+        return isEditing ? editContent : result;
+    };
+
+    const handleLoadAssessment = (item) => {
+        setFormData({
+            subject: item.subject || '',
+            year: item.year || '',
+            topic: item.topic || '',
+            type: item.type || 'Examen Tradicional',
+            difficulty: item.difficulty || 'Intermedio',
+            itemsCount: '5',
+        });
+        setResult(item.content || '');
+        setEditContent(item.content || '');
+        setLoadedId(item.id || null);
+        setIsEditing(false);
+        setShowHistory(false);
+    };
+
     const confirmCloudSave = async (isPublic) => {
         setIsSaving(true);
         setShowSaveModal(false);
