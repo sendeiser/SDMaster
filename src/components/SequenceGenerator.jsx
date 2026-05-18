@@ -358,7 +358,7 @@ const SequenceGenerator = ({ session, profile, loadedSequence, clearLoadedSequen
                                         {isEditing ? 'Finalizar' : 'Editar'}
                                     </PremiumButton>
                                     <div className="w-px h-8 bg-slate-200 mx-2"></div>
-                                    <PremiumButton variant="secondary" size="sm" onClick={() => exportToPDF(getActiveContent(), formData)} icon={<FileDown size={16}/>}>PDF</PremiumButton>
+                                    <PremiumButton variant="secondary" size="sm" onClick={() => exportToPDF(getActiveContent(), { ...formData, teacherName: profile?.full_name || profile?.username || '' })} icon={<FileDown size={16}/>}>PDF</PremiumButton>
                                     <PremiumButton variant="primary" size="sm" onClick={() => setShowSaveModal(true)} icon={<Save size={16}/>}>Guardar</PremiumButton>
                                 </div>
                             </div>

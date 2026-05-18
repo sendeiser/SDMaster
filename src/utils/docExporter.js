@@ -357,8 +357,14 @@ export async function exportToPDF(markdown, meta = {}, fileName = 'documento') {
     ${html}
 
     <div class="doc-footer">
-        <span>${meta.subject || ''} — ${meta.topic || ''}</span>
-        <span>SD Master · ${new Date().toLocaleDateString('es-AR')}</span>
+        <span>
+            <strong>Docente:</strong> ${meta.teacherName || '______________________'} <br>
+            ${meta.subject || 'Documento Académico'} — ${meta.topic || ''}
+        </span>
+        <span style="text-align: right;">
+            <strong>Generado por SD Master</strong><br>
+            Fecha: ${new Date().toLocaleDateString('es-AR')}
+        </span>
     </div>
 
     <script>
@@ -433,9 +439,18 @@ export async function exportToWord(markdown, meta = {}, fileName = 'documento') 
     ${html}
 
     <hr style="border:none; border-top:1px solid #e2e8f0; margin-top:22px;">
-    <p style="font-size:8pt; color:#94a3b8; text-align:center; font-style:italic;">
-        Documento de Planificación — ${meta.subject || ''} — Generado el ${new Date().toLocaleDateString('es-AR')}
-    </p>
+    <table style="width:100%; border:none; margin-bottom:12px; font-size:8pt; color:#64748b; font-style:italic;">
+        <tr style="border:none;">
+            <td style="border:none; padding:3px 0; text-align:left;">
+                <strong>Docente:</strong> ${meta.teacherName || '______________________'}<br>
+                ${meta.subject || 'Documento Académico'} — ${meta.topic || ''}
+            </td>
+            <td style="border:none; padding:3px 0; text-align:right;">
+                <strong>Generado por SD Master</strong><br>
+                Fecha: ${new Date().toLocaleDateString('es-AR')}
+            </td>
+        </tr>
+    </table>
 </body>
 </html>`;
 
