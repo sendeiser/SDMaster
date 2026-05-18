@@ -400,5 +400,49 @@ ${studentResponse}
             console.error("Error en AutoGrader:", error);
             throw error;
         }
+    },
+
+    async editContent(currentContent, instruction) {
+        await checkAndDeductCredit();
+
+        if (!currentContent || !instruction) {
+            throw new Error("Se requiere el contenido actual y una instrucción para editar.");
+        }
+
+        const prompt = `
+Eres un editor pedagógico experto.
+Se te proporcionará un documento generado previamente y una instrucción del usuario para modificarlo.
+
+INSTRUCCIÓN DEL USUARIO:
+"${instruction}"
+
+DOCUMENTO ACTUAL:
+${currentContent}
+
+TAREA:
+Reescribe y aplica la instrucción del usuario al documento actual.
+- Devuelve ÚNICAMENTE el Markdown modificado completo.
+- Mantén el formato Markdown y la estructura general a menos que la instrucción pida específicamente cambiarla.
+- NO incluyas introducciones como "Aquí tienes el documento modificado". Devuelve SOLO el Markdown resultante.
+`;
+
+        try {
+            const ai = getAI();
+            const model = ai.getGenerativeModel({
+                model: 'gemini-3-flash-preview',
+                systemInstruction: SYSTEM_PROMPTS.PEDAGOGICAL_EXPERT
+            });
+
+            const response = await model.generateContent(prompt);
+            const textResponse = response.response.text();
+
+            return {
+                success: true,
+                content: textResponse
+            };
+        } catch (error) {
+            console.error("Error al editar contenido con IA:", error);
+            throw error;
+        }
     }
 };

@@ -41,6 +41,10 @@ const AssessmentGenerator = ({ session, profile, loadedAssessment, clearLoadedAs
     const [result, setResult] = useState(null);
     const [isEditing, setIsEditing] = useState(false);
     const [editContent, setEditContent] = useState('');
+    
+    const [aiEditPrompt, setAiEditPrompt] = useState('');
+    const [isAiEditing, setIsAiEditing] = useState(false);
+    
     const [loadedId, setLoadedId] = useState(null);
     const [notification, setNotification] = useState(null);
     const [showHistory, setShowHistory] = useState(false);
@@ -160,6 +164,24 @@ const AssessmentGenerator = ({ session, profile, loadedAssessment, clearLoadedAs
         setLoadedId(item.id || null);
         setIsEditing(false);
         setShowHistory(false);
+    };
+
+    const handleAiEdit = async () => {
+        if (!aiEditPrompt.trim() || !result) return;
+        setIsAiEditing(true);
+        try {
+            const data = await antigravityService.editContent(result, aiEditPrompt);
+            if (data.success) {
+                setResult(data.content);
+                setEditContent(data.content);
+                setAiEditPrompt('');
+                showNotif('success', '¡Editado con IA!', 'El documento se ha modificado según tus instrucciones.');
+            }
+        } catch (err) {
+            showNotif('error', 'Error al Editar', err.message);
+        } finally {
+            setIsAiEditing(false);
+        }
     };
 
     const confirmCloudSave = async (isPublic) => {
@@ -384,7 +406,7 @@ const AssessmentGenerator = ({ session, profile, loadedAssessment, clearLoadedAs
                                 </div>
                             </div>
 
-                            <div className="p-5 sm:p-8 lg:p-12 bg-white border border-slate-200 rounded-2xl shadow-sm min-h-[500px] sm:min-h-[700px]">
+                            <div className="p-5 sm:p-8 lg:p-12 bg-white border border-slate-200 rounded-2xl shadow-sm min-h-[500px] sm:min-h-[700px] relative pb-28">
                                 {isEditing ? (
                                     <RichEditor value={editContent} onChange={setEditContent} />
                                 ) : (
@@ -395,6 +417,33 @@ const AssessmentGenerator = ({ session, profile, loadedAssessment, clearLoadedAs
                                         >
                                             {result}
                                         </ReactMarkdown>
+                                    </div>
+                                )}
+
+                                {/* Floating AI Edit Bar */}
+                                {!isEditing && (
+                                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[95%] sm:w-[90%] max-w-3xl bg-white/90 backdrop-blur-xl border border-brand-200 shadow-2xl shadow-brand-500/10 rounded-2xl p-2 sm:p-3 flex items-center gap-3 z-10">
+                                        <div className="hidden sm:flex p-2.5 bg-brand-50 text-brand-600 rounded-xl">
+                                            <Sparkles size={20} />
+                                        </div>
+                                        <input 
+                                            type="text" 
+                                            value={aiEditPrompt}
+                                            onChange={(e) => setAiEditPrompt(e.target.value)}
+                                            onKeyDown={(e) => e.key === 'Enter' && handleAiEdit()}
+                                            placeholder="Pedile a la IA que modifique algo (ej. 'Reescribí la consigna 3 más simple')"
+                                            className="flex-grow bg-transparent border-none outline-none text-sm font-medium text-slate-700 placeholder:text-slate-400 px-2"
+                                            disabled={isAiEditing}
+                                        />
+                                        <PremiumButton 
+                                            variant="primary" 
+                                            onClick={handleAiEdit} 
+                                            loading={isAiEditing}
+                                            className="!py-2.5 !px-5 !rounded-xl text-sm"
+                                            icon={!isAiEditing && <Sparkles size={16}/>}
+                                        >
+                                            {isAiEditing ? 'Editando...' : 'Aplicar'}
+                                        </PremiumButton>
                                     </div>
                                 )}
                             </div>
