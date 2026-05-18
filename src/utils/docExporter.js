@@ -362,7 +362,7 @@ export async function exportToPDF(markdown, meta = {}, fileName = 'documento') {
             ${meta.subject || 'Documento Académico'} — ${meta.topic || ''}
         </span>
         <span style="text-align: right;">
-            <strong>Generado por SD Master</strong><br>
+            ${(!meta.userPlan || meta.userPlan === 'free') ? '<strong>Generado por SD Master</strong><br>' : ''}
             Fecha: ${new Date().toLocaleDateString('es-AR')}
         </span>
     </div>
@@ -446,7 +446,7 @@ export async function exportToWord(markdown, meta = {}, fileName = 'documento') 
                 ${meta.subject || 'Documento Académico'} — ${meta.topic || ''}
             </td>
             <td style="border:none; padding:3px 0; text-align:right;">
-                <strong>Generado por SD Master</strong><br>
+                ${(!meta.userPlan || meta.userPlan === 'free') ? '<strong>Generado por SD Master</strong><br>' : ''}
                 Fecha: ${new Date().toLocaleDateString('es-AR')}
             </td>
         </tr>
