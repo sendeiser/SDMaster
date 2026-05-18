@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { Zap, ChevronRight, Sparkles } from 'lucide-react';
 
-const PLAN_LIMITS = { free: 10, pro: 100, institution: 500 };
+const PLAN_LIMITS = { free: 10, pro: 100, institution: 500, unlimited: '∞' };
 
 const CreditsBadge = ({ session, onUpgradeClick }) => {
     const [credits, setCredits] = useState(null);
@@ -27,9 +27,10 @@ const CreditsBadge = ({ session, onUpgradeClick }) => {
     if (!session || credits === null) return null;
 
     const limit = PLAN_LIMITS[plan] || 10;
-    const pct = Math.max(0, Math.min(100, (credits / limit) * 100));
-    const isLow = credits <= 2;
-    const isEmpty = credits <= 0;
+    const isUnlimited = plan === 'unlimited';
+    const pct = isUnlimited ? 100 : Math.max(0, Math.min(100, (credits / limit) * 100));
+    const isLow = !isUnlimited && credits <= 2;
+    const isEmpty = !isUnlimited && credits <= 0;
 
     return (
         <div
@@ -55,13 +56,13 @@ const CreditsBadge = ({ session, onUpgradeClick }) => {
                         <Zap size={12} className="fill-current" />
                     </div>
                     <span className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">
-                        {plan === 'free' ? 'Plan Inicial' : plan === 'pro' ? 'Docente Pro' : 'Institucional'}
+                        {plan === 'free' ? 'Plan Inicial' : plan === 'pro' ? 'Docente Pro' : plan === 'unlimited' ? 'Créditos Infinitos' : 'Institucional'}
                     </span>
                 </div>
                 <span className={`text-xs font-black tracking-tight ${
                     isEmpty ? 'text-red-600' : isLow ? 'text-amber-600' : 'text-slate-900'
                 }`}>
-                    {credits}/{limit}
+                    {isUnlimited ? '∞' : `${credits}/${limit}`}
                 </span>
             </div>
 
@@ -89,9 +90,14 @@ const CreditsBadge = ({ session, onUpgradeClick }) => {
                     <ChevronRight size={12} className="text-slate-300 group-hover/upgrade:text-brand-600 group-hover/upgrade:translate-x-0.5 transition-all" />
                 </div>
             ) : (
-                <div className="flex items-center gap-1.5 text-[9px] font-bold text-slate-400">
-                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></div>
-                    Membresía Activa
+                <div className="flex items-center justify-between text-[9px] font-bold text-slate-400">
+                    <div className="flex items-center gap-1.5">
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></div>
+                        Membresía Activa
+                    </div>
+                    {isUnlimited && (
+                        <span className="text-brand-500 font-extrabold uppercase animate-pulse">Admin Power</span>
+                    )}
                 </div>
             )}
         </div>

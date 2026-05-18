@@ -11,13 +11,14 @@ import StudentDashboard from './components/StudentDashboard';
 import CreditsBadge from './components/CreditsBadge';
 import PlansPage from './components/PlansPage';
 import LandingPage from './components/LandingPage';
+import AdminPanel from './components/AdminPanel';
 import { PremiumButton, PremiumCard, PremiumToast } from './components/shared/PremiumUI';
 import { supabase } from './lib/supabaseClient';
 import { 
     Sparkles, Layout, Database, Settings as SettingsIcon, PanelLeftOpen, 
     PanelLeftClose, LogOut, LogIn, Globe, FolderHeart, ClipboardCheck, 
     Users, GraduationCap, Zap, BookOpen, ArrowRight, Menu, X,
-    ChevronRight, Bell, Search, User, Award, Play
+    ChevronRight, Bell, Search, User, Award, Play, ShieldCheck
 } from 'lucide-react';
 
 function App() {
@@ -111,6 +112,7 @@ function App() {
         { id: 'student_classes', label: 'Mi Tablero', icon: GraduationCap, requireRole: 'student', group: 'Alumno' },
         { id: 'community', label: 'Comunidad', icon: Globe, requireRole: 'teacher', group: 'Explora' },
         { id: 'plans', label: 'Suscripciones', icon: Zap, requireRole: 'teacher', group: 'Explora' },
+        { id: 'admin', label: 'Panel Admin', icon: ShieldCheck, group: 'Sistema', requirePlan: 'unlimited' },
         { id: 'config', label: 'Mi Perfil', icon: SettingsIcon, group: 'Sistema' },
     ];
 
@@ -256,6 +258,7 @@ function App() {
                         <div className="flex-grow space-y-2 overflow-y-auto custom-scrollbar pr-2">
                              {navItems.map((item) => {
                                 if (item.requireRole && profile?.role !== item.requireRole) return null;
+                                if (item.requirePlan && profile?.plan !== item.requirePlan) return null;
                                 const isActive = activeTab === item.id;
                                 return (
                                     <button
@@ -290,8 +293,13 @@ function App() {
                         
                         {/* Grouped Navigation */}
                         {['Creación', 'Gestión', 'Explora', 'Sistema'].map(group => {
-                            const items = navItems.filter(i => i.group === group);
-                            if (items.every(i => i.requireRole && profile?.role !== i.requireRole)) return null;
+                            const items = navItems.filter(i => {
+                                if (i.group !== group) return false;
+                                if (i.requireRole && profile?.role !== i.requireRole) return false;
+                                if (i.requirePlan && profile?.plan !== i.requirePlan) return false;
+                                return true;
+                            });
+                            if (items.length === 0) return null;
 
                             return (
                                 <div key={group} className="space-y-4">
@@ -300,7 +308,6 @@ function App() {
                                     </h4>
                                     <div className="space-y-2">
                                         {items.map(item => {
-                                            if (item.requireRole && profile?.role !== item.requireRole) return null;
                                             const isActive = activeTab === item.id;
                                             return (
                                                 <button
@@ -340,14 +347,23 @@ function App() {
                                             <div className="p-2 bg-slate-200 rounded-lg text-slate-700">
                                                 <Zap size={16} fill="currentColor"/>
                                             </div>
-                                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">Mi Plan: {profile.plan || 'Free'}</span>
+                                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">Mi Plan: {profile.plan === 'unlimited' ? 'Administrador' : (profile.plan || 'Free')}</span>
                                         </div>
-                                        <h5 className="text-2xl font-black text-slate-900 tracking-tighter leading-none mb-1">{profile.credits_remaining || 0} <span className="text-slate-400 text-[10px] tracking-widest font-bold">CR</span></h5>
-                                        <p className="text-slate-500 text-[9px] font-black uppercase tracking-widest">Créditos IA Disponibles</p>
+                                        <h5 className="text-2xl font-black text-slate-900 tracking-tighter leading-none mb-1">{profile.plan === 'unlimited' ? '∞' : (profile.credits_remaining || 0)} <span className="text-slate-400 text-[10px] tracking-widest font-bold">CR</span></h5>
+                                        <p className="text-slate-500 text-[9px] font-black uppercase tracking-widest">{profile.plan === 'unlimited' ? 'Créditos Infinitos' : 'Créditos IA Disponibles'}</p>
                                     </div>
-                                    <button className="relative z-10 w-full py-2 bg-white hover:bg-slate-100 text-slate-900 font-black text-[10px] uppercase tracking-widest rounded-lg transition-all border border-slate-200 shadow-sm">
-                                        Cargar más
-                                    </button>
+                                    {profile.plan === 'unlimited' ? (
+                                        <button 
+                                            onClick={() => setActiveTab('admin')}
+                                            className="relative z-10 w-full py-2 bg-slate-900 hover:bg-slate-800 text-white font-black text-[10px] uppercase tracking-widest rounded-lg transition-all border border-slate-900 shadow-sm"
+                                        >
+                                            Panel Admin
+                                        </button>
+                                    ) : (
+                                        <button className="relative z-10 w-full py-2 bg-white hover:bg-slate-100 text-slate-900 font-black text-[10px] uppercase tracking-widest rounded-lg transition-all border border-slate-200 shadow-sm">
+                                            Cargar más
+                                        </button>
+                                    )}
                                     <div className="absolute -right-8 -bottom-8 opacity-5 text-white group-hover:scale-125 transition-transform duration-700">
                                         <Award size={120} />
                                     </div>
@@ -395,6 +411,8 @@ function App() {
                             <StudentDashboard session={session} profile={profile} />
                         ) : activeTab === 'plans' ? (
                             <PlansPage currentPlan={profile?.plan || 'free'} onClose={() => setActiveTab(profile?.role === 'student' ? 'student_classes' : 'generator')} />
+                        ) : activeTab === 'admin' ? (
+                            <AdminPanel session={session} profile={profile} />
                         ) : (
                             <Settings session={session} onProfileUpdate={loadUserProfile} />
                         )}
