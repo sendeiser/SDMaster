@@ -226,45 +226,6 @@ body {
     print-color-adjust: exact !important;
 }
 
-.doc-header {
-    background-color: #1e3a8a;
-    color: white;
-    padding: 12px 20px;
-    margin: -18mm -16mm 18px -16mm;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 8.5pt;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-}
-
-.doc-meta {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 16px;
-    padding-bottom: 12px;
-    border-bottom: 2px solid #1e40af;
-}
-
-.doc-meta-left { }
-
-.doc-meta-left .doc-title {
-    font-size: 16pt;
-    font-weight: 900;
-    color: #0f172a;
-    line-height: 1.2;
-    margin-bottom: 4px;
-}
-
-.doc-meta-left .doc-subtitle {
-    font-size: 9pt;
-    color: #64748b;
-    font-weight: 500;
-}
-
 .doc-meta-right {
     text-align: right;
     flex-shrink: 0;
@@ -300,12 +261,17 @@ p { orphans: 3; widows: 3; }
     bottom: 0;
     left: 0;
     right: 0;
-    font-size: 7pt;
-    color: #94a3b8;
-    border-top: 1px solid #e2e8f0;
-    padding: 5px 16mm;
+    font-size: 8pt;
+    color: #64748b;
+    border-top: 1.5px solid #e2e8f0;
+    padding: 8px 16mm 0 16mm;
     display: flex;
     justify-content: space-between;
+    background: white;
+}
+
+.page-number::after {
+    content: "Página " counter(page);
 }
 `;
 
@@ -338,32 +304,12 @@ export async function exportToPDF(markdown, meta = {}, fileName = 'documento') {
     </style>
 </head>
 <body>
-    <div class="doc-header">
-        <span>SD Master — Planificación Docente</span>
-        <span>${(meta.type || 'Documento Académico').toUpperCase()}</span>
-    </div>
-
-    <div class="doc-meta">
-        <div class="doc-meta-left">
-            <div class="doc-title">${meta.topic || 'Documento Académico'}</div>
-            <div class="doc-subtitle">${[meta.subject, meta.year].filter(Boolean).join(' · ')}</div>
-        </div>
-        <div class="doc-meta-right">
-            <span class="doc-badge">${meta.difficulty || meta.type || 'Académico'}</span>
-            <div class="doc-date">${new Date().toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })}</div>
-        </div>
-    </div>
-
     ${html}
 
     <div class="doc-footer">
-        <span>
-            <strong>Docente:</strong> ${meta.teacherName || '______________________'} <br>
-            ${meta.subject || 'Documento Académico'} — ${meta.topic || ''}
-        </span>
-        <span style="text-align: right;">
-            ${(!meta.userPlan || meta.userPlan === 'free') ? '<strong>Generado por SD Master</strong><br>' : ''}
-            Fecha: ${new Date().toLocaleDateString('es-AR')}
+        <span><strong>Docente:</strong> ${meta.teacherName || '______________________'}</span>
+        <span class="page-number">
+            ${(!meta.userPlan || meta.userPlan === 'free') ? '<span style="opacity: 0.6; margin-right: 12px;">SD Master</span>' : ''}
         </span>
     </div>
 
@@ -420,34 +366,16 @@ export async function exportToWord(markdown, meta = {}, fileName = 'documento') 
     </style>
 </head>
 <body>
-    <table style="width:100%; border:none; margin-bottom:12px;">
-        <tr style="border:none;">
-            <td style="border:none; padding:3px 0;">
-                <strong style="color:#1e3a8a; font-size:9pt; text-transform:uppercase; letter-spacing:0.1em;">
-                    SD Master — Documento de Planificación Docente
-                </strong>
-            </td>
-        </tr>
-        <tr style="border:none;">
-            <td style="border:none; padding:2px 0; font-size:9pt; color:#64748b;">
-                ${[meta.subject, meta.year, meta.type].filter(Boolean).join(' | ')} — ${new Date().toLocaleDateString('es-AR')}
-            </td>
-        </tr>
-    </table>
-    <hr style="border:none; border-top:2px solid #1e40af; margin-bottom:14px;">
-
     ${html}
 
     <hr style="border:none; border-top:1px solid #e2e8f0; margin-top:22px;">
-    <table style="width:100%; border:none; margin-bottom:12px; font-size:8pt; color:#64748b; font-style:italic;">
+    <table style="width:100%; border:none; margin-bottom:12px; font-size:9pt; color:#64748b; font-style:italic;">
         <tr style="border:none;">
             <td style="border:none; padding:3px 0; text-align:left;">
-                <strong>Docente:</strong> ${meta.teacherName || '______________________'}<br>
-                ${meta.subject || 'Documento Académico'} — ${meta.topic || ''}
+                <strong>Docente:</strong> ${meta.teacherName || '______________________'}
             </td>
             <td style="border:none; padding:3px 0; text-align:right;">
-                ${(!meta.userPlan || meta.userPlan === 'free') ? '<strong>Generado por SD Master</strong><br>' : ''}
-                Fecha: ${new Date().toLocaleDateString('es-AR')}
+                ${(!meta.userPlan || meta.userPlan === 'free') ? '<span style="opacity: 0.6;">Generado por SD Master</span>' : ''}
             </td>
         </tr>
     </table>
