@@ -410,8 +410,7 @@ ${studentResponse}
         }
 
         const prompt = `
-Eres un editor pedagógico experto.
-Se te proporcionará un documento generado previamente y una instrucción del usuario para modificarlo.
+Eres un editor pedagógico experto. Tu tarea es modificar un documento estrictamente basándote en la instrucción del usuario, preservando TODO el resto del contenido de forma idéntica.
 
 INSTRUCCIÓN DEL USUARIO:
 "${instruction}"
@@ -419,11 +418,10 @@ INSTRUCCIÓN DEL USUARIO:
 DOCUMENTO ACTUAL:
 ${currentContent}
 
-TAREA:
-Reescribe y aplica la instrucción del usuario al documento actual.
-- Devuelve ÚNICAMENTE el Markdown modificado completo.
-- Mantén el formato Markdown y la estructura general a menos que la instrucción pida específicamente cambiarla.
-- NO incluyas introducciones como "Aquí tienes el documento modificado". Devuelve SOLO el Markdown resultante.
+REGLAS CRÍTICAS DE EDICIÓN:
+1. PRECISIÓN QUIRÚRGICA: Modifica, agrega o elimina ÚNICAMENTE lo que se solicita explícitamente en la "INSTRUCCIÓN DEL USUARIO".
+2. PRESERVACIÓN TOTAL: El resto del documento (títulos, explicaciones teóricas, viñetas, ejercicios que no fueron mencionados) DEBE mantenerse idéntico, palabra por palabra. NO resumas, NO recortes y NO alteres el contenido que no está relacionado con la instrucción.
+3. FORMATO: Devuelve ÚNICAMENTE el código Markdown resultante. NO incluyas introducciones (ej. "Aquí tienes el documento"), despedidas, ni explicaciones de lo que cambiaste.
 `;
 
         try {
