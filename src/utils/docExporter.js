@@ -294,19 +294,6 @@ thead { display: table-header-group; }
 tr { page-break-inside: avoid; }
 h1, h2, h3, h4 { page-break-after: avoid; }
 p { orphans: 3; widows: 3; }
-
-.doc-footer {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    font-size: 7pt;
-    color: #94a3b8;
-    border-top: 1px solid #e2e8f0;
-    padding: 5px 16mm;
-    display: flex;
-    justify-content: space-between;
-}
 `;
 
 // ─── Estilos Word ────────────────────────────────────────
@@ -355,17 +342,6 @@ export async function exportToPDF(markdown, meta = {}, fileName = 'documento') {
     </div>
 
     ${html}
-
-    <div class="doc-footer">
-        <span>
-            <strong>Docente:</strong> ${meta.teacherName || '______________________'} <br>
-            ${meta.subject || 'Documento Académico'} — ${meta.topic || ''}
-        </span>
-        <span style="text-align: right;">
-            ${(!meta.userPlan || meta.userPlan === 'free') ? '<strong>Generado por SD Master</strong><br>' : ''}
-            Fecha: ${new Date().toLocaleDateString('es-AR')}
-        </span>
-    </div>
 
     <script>
         // Esperar a que KaTeX CSS cargue y fuentes se rendericen
@@ -437,20 +413,6 @@ export async function exportToWord(markdown, meta = {}, fileName = 'documento') 
     <hr style="border:none; border-top:2px solid #1e40af; margin-bottom:14px;">
 
     ${html}
-
-    <hr style="border:none; border-top:1px solid #e2e8f0; margin-top:22px;">
-    <table style="width:100%; border:none; margin-bottom:12px; font-size:8pt; color:#64748b; font-style:italic;">
-        <tr style="border:none;">
-            <td style="border:none; padding:3px 0; text-align:left;">
-                <strong>Docente:</strong> ${meta.teacherName || '______________________'}<br>
-                ${meta.subject || 'Documento Académico'} — ${meta.topic || ''}
-            </td>
-            <td style="border:none; padding:3px 0; text-align:right;">
-                ${(!meta.userPlan || meta.userPlan === 'free') ? '<strong>Generado por SD Master</strong><br>' : ''}
-                Fecha: ${new Date().toLocaleDateString('es-AR')}
-            </td>
-        </tr>
-    </table>
 </body>
 </html>`;
 
