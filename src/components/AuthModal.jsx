@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabaseClient';
 import { 
     X, Mail, Lock as LockIcon, Loader2, ArrowRight, UserPlus, 
     LogIn, GraduationCap, BookOpen, Sparkles, 
-    ChevronRight, ShieldCheck, MailCheck
+    ChevronRight, ShieldCheck, MailCheck, AlertCircle
 } from 'lucide-react';
 import { PremiumButton } from './shared/PremiumUI';
 
