@@ -418,6 +418,7 @@ const AssessmentGenerator = ({ session, profile, loadedAssessment, clearLoadedAs
                                     </PremiumButton>
                                     <div className="w-px h-8 bg-slate-200 mx-2"></div>
                                     <PremiumButton variant="secondary" size="sm" onClick={() => exportToPDF(getActiveContent(), { ...formData, teacherName: profile?.full_name || profile?.username || '', userPlan: profile?.plan || 'free' })} icon={<FileDown size={16}/>}>PDF</PremiumButton>
+                                    <PremiumButton variant="secondary" size="sm" onClick={() => exportToWord(getActiveContent(), { ...formData, teacherName: profile?.full_name || profile?.username || '', userPlan: profile?.plan || 'free' })} icon={<FileText size={16}/>}>Word</PremiumButton>
                                     <PremiumButton variant="primary" size="sm" onClick={() => setShowSaveModal(true)} icon={<Save size={16}/>} className="!bg-indigo-600 hover:!bg-indigo-700">Guardar</PremiumButton>
                                 </div>
                             </div>

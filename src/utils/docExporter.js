@@ -304,6 +304,65 @@ th { background-color: #1e3a8a !important; color: white !important; }
 tr:nth-child(even) td { background-color: #f8fafc !important; }
 pre { background-color: #f1f5f9 !important; color: #334155 !important; }
 blockquote { background-color: #eff6ff !important; }
+
+.doc-header {
+    background-color: #1e3a8a;
+    color: white;
+    padding: 12px 20px;
+    margin: 0 0 18px 0;
+    font-size: 8.5pt;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.doc-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #1e40af;
+}
+
+.doc-meta-left .doc-title {
+    font-size: 16pt;
+    font-weight: 900;
+    color: #0f172a;
+    line-height: 1.2;
+    margin-bottom: 4px;
+}
+
+.doc-meta-left .doc-subtitle {
+    font-size: 9pt;
+    color: #64748b;
+    font-weight: 500;
+}
+
+.doc-meta-right {
+    text-align: right;
+    flex-shrink: 0;
+}
+
+.doc-badge {
+    display: inline-block;
+    background-color: #eff6ff;
+    border: 1px solid #bfdbfe;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 7.5pt;
+    font-weight: 800;
+    color: #1e40af;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.doc-date {
+    font-size: 7.5pt;
+    color: #94a3b8;
+    margin-top: 6px;
+    font-family: 'Courier New', monospace;
+}
 `;
 
 // ═══════════════════════════════════════════════════════════
@@ -396,21 +455,21 @@ export async function exportToWord(markdown, meta = {}, fileName = 'documento') 
     </style>
 </head>
 <body>
-    <table style="width:100%; border:none; margin-bottom:12px;">
-        <tr style="border:none;">
-            <td style="border:none; padding:3px 0;">
-                <strong style="color:#1e3a8a; font-size:9pt; text-transform:uppercase; letter-spacing:0.1em;">
-                    SD Master — Documento de Planificación Docente
-                </strong>
-            </td>
-        </tr>
-        <tr style="border:none;">
-            <td style="border:none; padding:2px 0; font-size:9pt; color:#64748b;">
-                ${[meta.subject, meta.year, meta.type].filter(Boolean).join(' | ')} — ${new Date().toLocaleDateString('es-AR')}
-            </td>
-        </tr>
-    </table>
-    <hr style="border:none; border-top:2px solid #1e40af; margin-bottom:14px;">
+    <div class="doc-header">
+        <span>SD Master — Planificación Docente</span>
+        <span>${(meta.type || 'Documento Académico').toUpperCase()}</span>
+    </div>
+
+    <div class="doc-meta">
+        <div class="doc-meta-left">
+            <div class="doc-title">${meta.topic || 'Documento Académico'}</div>
+            <div class="doc-subtitle">${[meta.subject, meta.year].filter(Boolean).join(' · ')}</div>
+        </div>
+        <div class="doc-meta-right">
+            <span class="doc-badge">${meta.difficulty || meta.type || 'Académico'}</span>
+            <div class="doc-date">${new Date().toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })}</div>
+        </div>
+    </div>
 
     ${html}
 </body>
